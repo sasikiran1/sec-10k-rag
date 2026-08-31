@@ -6,4 +6,6 @@ pgvector>=0.3
 pydantic>=2.8
 pydantic-settings>=2.4
 sentence-transformers>=3.0
+beautifulsoup4>=4.12
+lxml>=5.0
 pytest>=8.0
