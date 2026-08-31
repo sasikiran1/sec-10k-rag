@@ -1,0 +1,22 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: sec10k-db
+    environment:
+      POSTGRES_USER: sec10k
+      POSTGRES_PASSWORD: sec10k
+      POSTGRES_DB: sec10k
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs ONLY on first init (empty data dir). See notes if you change it later.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sec10k -d sec10k"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
