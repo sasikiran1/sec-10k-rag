@@ -1,4 +1,5 @@
-openai>=1.50
+openai>=3.6
+httpx2>=2.12          # openai's HTTP layer; imported directly in tests
 python-dotenv>=1.0
 psycopg[binary]>=3.2
 pydantic>=2.8

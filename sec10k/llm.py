@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from sec10k.config import get_settings
 from sec10k.db import LlmCall, log_llm_call
-
+from sec10k.retry import with_retries
 
 class ChatResult(BaseModel):
     """What `chat()` hands back to the caller.
@@ -40,6 +40,7 @@ def _client() -> OpenAI:
     return OpenAI(
         api_key=settings.active_api_key(),
         base_url=settings.active_base_url(),
+        max_retries=0,  # we do our own ret/backoff in sec10k.retry
     )
 
 
@@ -77,10 +78,12 @@ def chat(messages: list[dict[str, str]], *, tag: str | None = None) -> ChatResul
     """
     settings = get_settings()
     start = time.perf_counter()
-    resp = _client().chat.completions.create(
-        model=settings.active_model(),
-        temperature=0,
-        messages=messages,
+    resp = with_retries(
+        lambda: _client().chat.completions.create(
+            model=settings.active_model(),
+            temperature=0,
+            messages=messages,
+        )
     )
     latency_ms = round((time.perf_counter() - start) * 1000)
     text = resp.choices[0].message.content
