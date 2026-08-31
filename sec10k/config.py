@@ -34,6 +34,9 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://sec10k:sec10k@localhost:5433/sec10k"
 
+    # SEC EDGAR rejects requests without a descriptive User-Agent (name + email).
+    sec_user_agent: str = "sec-10k-rag/0.1 (set SEC_USER_AGENT in .env)"
+
     def active_api_key(self) -> str:
         """Return the API key for whichever provider `llm_provider` selects.
 
