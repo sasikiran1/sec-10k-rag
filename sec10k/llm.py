@@ -6,8 +6,10 @@ is measured and logged exactly once.
 """
 from __future__ import annotations
 
+import json
 import time
 from functools import lru_cache
+from typing import TypeVar
 
 from openai import OpenAI
 from pydantic import BaseModel
@@ -15,6 +17,10 @@ from pydantic import BaseModel
 from sec10k.config import get_settings
 from sec10k.db import LlmCall, log_llm_call
 from sec10k.retry import with_retries
+from pydantic import BaseModel, ValidationError
+
+# A stand-in for "whatever Pydantic model the caller asked us to fill in".
+M = TypeVar("M", bound=BaseModel)
 
 class ChatResult(BaseModel):
     """What `chat()` hands back to the caller.
@@ -44,7 +50,12 @@ def _client() -> OpenAI:
     )
 
 
-def chat(messages: list[dict[str, str]], *, tag: str | None = None) -> ChatResult:
+def chat(
+    messages: list[dict[str, str]],
+    *,
+    tag: str | None = None,
+    response_format: dict | None = None,
+) -> ChatResult:
     """Send `messages` to the active model at temperature 0, log the call, return it.
 
     `messages` is a list of {"role": ..., "content": ...} dicts, exactly the shape
@@ -78,13 +89,16 @@ def chat(messages: list[dict[str, str]], *, tag: str | None = None) -> ChatResul
     """
     settings = get_settings()
     start = time.perf_counter()
-    resp = with_retries(
-        lambda: _client().chat.completions.create(
-            model=settings.active_model(),
-            temperature=0,
-            messages=messages,
-        )
-    )
+
+    create_kwargs: dict = {
+        "model": settings.active_model(),
+        "temperature": 0,
+        "messages": messages,
+    }
+    if response_format is not None:
+        create_kwargs["response_format"] = response_format
+
+    resp = with_retries(lambda: _client().chat.completions.create(**create_kwargs))
     latency_ms = round((time.perf_counter() - start) * 1000)
     text = resp.choices[0].message.content
     usage = resp.usage
@@ -102,3 +116,76 @@ def chat(messages: list[dict[str, str]], *, tag: str | None = None) -> ChatResul
     )
     db_id = log_llm_call(record)
     return ChatResult(text=text, record=record, db_id=db_id)
+
+
+def chat_structured(
+    messages: list[dict[str, str]],
+    schema: type[M],
+    *,
+    tag: str | None = None,
+) -> tuple[M, ChatResult]:
+    """Ask the model to fill in `schema`; return (parsed_object, raw_chat_result).
+
+    This is the NO-SAFETY-NET version. If the model returns anything that isn't
+    exactly one JSON object of the right shape, this raises. That failure is the
+    point — it's what the repair loop (next) exists to handle.
+
+    Steps to implement:
+      1. Build an instruction message:
+             instruction = {
+                 "role": "system",
+                 "content": (
+                     "Return ONE JSON object and nothing else - no prose, no "
+                     "markdown fences. It must match this JSON Schema:\n"
+                     + json.dumps(schema.model_json_schema())
+                 ),
+             }
+      2. result = chat([*messages, instruction], tag=tag)
+      3. payload = json.loads(result.text)        # raises json.JSONDecodeError on non-JSON
+      4. obj = schema.model_validate(payload)     # raises pydantic.ValidationError on wrong shape
+      5. return obj, result
+    """
+class StructuredOutputError(RuntimeError):
+    """The model never produced JSON matching the schema, even after repair attempts."""
+
+
+def chat_structured(
+    messages: list[dict[str, str]],
+    schema: type[M],
+    *,
+    tag: str | None = None,
+    max_repairs: int = 2,
+) -> tuple[M, ChatResult]:
+    """Ask the model to fill in `schema`; return (parsed_object, raw_chat_result).
+
+    Defense 1: response_format json_object -> the reply is always valid JSON.
+    Defense 2: if it's valid JSON but the wrong shape, feed the ValidationError
+    back and let the model correct itself, up to `max_repairs` times.
+    """
+    instruction = {
+        "role": "system",
+        "content": (
+            "Return ONE JSON object and nothing else. "
+            "It must match this JSON Schema:\n" + json.dumps(schema.model_json_schema())
+        ),
+    }
+    convo = [*messages, instruction]
+    last_error: Exception | None = None
+
+    for _ in range(max_repairs + 1):          # first try + up to max_repairs retries
+        result = chat(convo, tag=tag, response_format={"type": "json_object"})
+        try:
+            payload = json.loads(result.text)
+            return schema.model_validate(payload), result
+        except (json.JSONDecodeError, ValidationError) as err:
+            last_error = err
+            convo = convo + [
+                {"role": "assistant", "content": result.text},
+                {"role": "user", "content":
+                    f"That JSON did not match the schema. Error:\n{err}\n"
+                    "Reply with a corrected JSON object only."},
+            ]
+
+    raise StructuredOutputError(
+        f"No schema-valid output after {max_repairs} repair attempt(s)"
+    ) from last_error
