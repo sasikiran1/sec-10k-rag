@@ -7,6 +7,7 @@ every later improvement (hybrid, rerank, decomposition) has to beat.
 from __future__ import annotations
 
 from pgvector import Vector
+from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from sec10k.db import get_connection
@@ -14,13 +15,18 @@ from sec10k.embeddings import embed_text, embed_texts
 
 
 class Hit(BaseModel):
-    """One search result."""
+    """One search result. Filing-metadata fields are None for ad-hoc test data."""
 
     id: int
     source: str
     ord: int
     text: str
     score: float  # cosine similarity in [-1, 1]; higher = more similar
+    section: str | None = None
+    kind: str | None = None
+    company: str | None = None
+    accession: str | None = None
+    fiscal_year: int | None = None
 
 
 def add_chunks(rows: list[tuple[str, int, str]]) -> int:
@@ -63,25 +69,17 @@ def search(query: str, k: int = 5) -> list[Hit]:
     2 = opposite. Cosine SIMILARITY = 1 - distance. So we ORDER BY the distance
     ascending (nearest first) and report `1 - distance` as the score.
 
-    Implementation:
-      1. qv = embed_text(query)
-      2. sql = '''
-             SELECT id, source, ord, text, 1 - (embedding <=> %(qv)s) AS score
-             FROM chunks
-             ORDER BY embedding <=> %(qv)s
-             LIMIT %(k)s
-         '''
-      3. with get_connection() as conn:
-             rows = conn.execute(sql, {"qv": qv, "k": k}).fetchall()
-      4. return [Hit(id=r[0], source=r[1], ord=r[2], text=r[3], score=r[4]) for r in rows]
+    Rows come back as dicts (psycopg dict_row) so Hit(**row) just works.
     """
     qv = Vector(embed_text(query))
     sql = """
-        SELECT id, source, ord, text, 1 - (embedding <=> %(qv)s) AS score
+        SELECT id, source, ord, text, section, kind, company, accession, fiscal_year,
+               1 - (embedding <=> %(qv)s) AS score
         FROM chunks
         ORDER BY embedding <=> %(qv)s
         LIMIT %(k)s
     """
     with get_connection() as conn:
+        conn.row_factory = dict_row
         rows = conn.execute(sql, {"qv": qv, "k": k}).fetchall()
-    return [Hit(id=r[0], source=r[1], ord=r[2], text=r[3], score=r[4]) for r in rows]
+    return [Hit(**row) for row in rows]

@@ -23,18 +23,26 @@ CREATE TABLE IF NOT EXISTS llm_calls (
 CREATE INDEX IF NOT EXISTS llm_calls_created_at_idx ON llm_calls (created_at);
 CREATE INDEX IF NOT EXISTS llm_calls_tag_idx        ON llm_calls (tag);
 
--- A chunk of source text plus its embedding. This shape is deliberately minimal;
--- session 4 (EDGAR ingestion) will grow it — company, fiscal year, 10-K item, etc.
+-- A chunk of source text plus its embedding. `source` + `ord` identify a chunk
+-- within a document; the filing-metadata columns are NULL for ad-hoc test data
+-- and filled in by sec10k.ingest for real 10-Ks.
 CREATE TABLE IF NOT EXISTS chunks (
-    id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    source     text        NOT NULL,          -- which document this came from
-    ord        integer     NOT NULL,          -- position of this chunk within that document
-    text       text        NOT NULL,
-    embedding  vector(384) NOT NULL,          -- must match sec10k.embeddings.EMBEDDING_DIM
-    created_at timestamptz NOT NULL DEFAULT now()
+    id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    source      text        NOT NULL,         -- accession number, or a label for ad-hoc data
+    ord         integer     NOT NULL,         -- position of this chunk within the document
+    text        text        NOT NULL,
+    embedding   vector(384) NOT NULL,         -- must match sec10k.embeddings.EMBEDDING_DIM
+    company     text,
+    cik         integer,
+    accession   text,
+    fiscal_year integer,
+    section     text,                         -- "Item 7" etc.
+    kind        text,                         -- "prose" | "table"
+    created_at  timestamptz NOT NULL DEFAULT now()
 );
 
 -- pgvector does a sequential scan unless there's an ANN index. HNSW with cosine
 -- ops means queries must compare with the <=> (cosine distance) operator.
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
     ON chunks USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS chunks_accession_idx ON chunks (accession);

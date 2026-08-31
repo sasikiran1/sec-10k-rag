@@ -15,3 +15,6 @@ testpaths = ["tests"]
 markers = [
     "live: test makes a real network call to an LLM API (deselect with -m 'not live')",
 ]
+filterwarnings = [
+    "ignore::bs4.XMLParsedAsHTMLWarning",
+]
