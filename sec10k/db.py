@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from typing import Iterator
 
 import psycopg
+from pgvector.psycopg import register_vector
 from pydantic import BaseModel
 
 from sec10k.config import get_settings
@@ -45,6 +46,9 @@ def get_connection() -> Iterator[psycopg.Connection]:
     connection with the URL from config and hand it out.)
     """
     with psycopg.connect(get_settings().database_url) as conn:
+        # Teach this connection the pgvector types, so Python lists can be passed
+        # as query params and `vector` columns come back as lists.
+        register_vector(conn)
         yield conn
 
 
