@@ -1,0 +1,49 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: sec10k
+          POSTGRES_PASSWORD: sec10k
+          POSTGRES_DB: sec10k
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sec10k -d sec10k"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://sec10k:sec10k@localhost:5432/sec10k
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Apply schema
+        run: psql "$DATABASE_URL" -f db/schema.sql
+        env:
+          PGPASSWORD: sec10k
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Run non-live tests
+        run: pytest -m "not live" -v
