@@ -42,11 +42,21 @@ def format_context(hits: list[Hit]) -> str:
     )
 
 
-def answer(question: str, *, k: int = 6, tag: str = "answer") -> AnswerResult:
+def answer(
+    question: str,
+    *,
+    k: int = 6,
+    tag: str = "answer",
+    company: str | None = None,
+    fiscal_year: int | None = None,
+) -> AnswerResult:
     """Retrieve k chunks for `question`, generate a grounded answer, return both.
 
+    `company` / `fiscal_year` are passed through to search() to scope retrieval to
+    one filing (the eval uses this to measure metadata filtering as its own step).
+
     Steps:
-      1. hits = search(question, k=k)
+      1. hits = search(question, k=k, company=company, fiscal_year=fiscal_year)
       2. messages = [
              {"role": "system", "content": SYSTEM_PROMPT},
              {"role": "user", "content":
@@ -56,7 +66,7 @@ def answer(question: str, *, k: int = 6, tag: str = "answer") -> AnswerResult:
       4. return AnswerResult(question=question, answer=result.text.strip(),
                              hits=hits, chat=result)
     """
-    hits = search(question, k=k)
+    hits = search(question, k=k, company=company, fiscal_year=fiscal_year)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {

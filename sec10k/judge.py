@@ -8,7 +8,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from sec10k.goldens import REFUSAL
-from sec10k.llm import chat_structured
+from sec10k.llm import ChatResult, chat_structured
 
 JUDGE_SYSTEM = (
     "You grade whether a PREDICTED answer to a question about an SEC 10-K filing "
@@ -28,19 +28,13 @@ class Verdict(BaseModel):
     reasoning: str
 
 
-def judge(question: str, gold: str, predicted: str, *, tag: str = "judge") -> Verdict:
-    """Ask the model to grade `predicted` against `gold` for `question`.
+def judge(
+    question: str, gold: str, predicted: str, *, tag: str = "judge"
+) -> tuple[Verdict, ChatResult]:
+    """Grade `predicted` against `gold` for `question`.
 
-    Steps:
-      1. messages = [
-             {"role": "system", "content": JUDGE_SYSTEM},
-             {"role": "user", "content":
-                 f"Question: {question}\n\n"
-                 f"Reference answer: {gold}\n\n"
-                 f"Predicted answer: {predicted}"},
-         ]
-      2. verdict, _ = chat_structured(messages, Verdict, tag=tag)
-      3. return verdict
+    Returns (verdict, chat_result) — the ChatResult carries the judge call's own
+    token/latency cost, which the eval accounts for separately from answering.
     """
     messages = [
         {"role": "system", "content": JUDGE_SYSTEM},
@@ -53,5 +47,4 @@ def judge(question: str, gold: str, predicted: str, *, tag: str = "judge") -> Ve
             ),
         },
     ]
-    verdict, _ = chat_structured(messages, Verdict, tag=tag)
-    return verdict
+    return chat_structured(messages, Verdict, tag=tag)
