@@ -23,11 +23,23 @@ RETRYABLE_ERRORS: tuple[type[Exception], ...] = (
 )
 
 
+def _retry_after_seconds(err: Exception) -> float | None:
+    """If the server told us how long to wait (429 Retry-After header), return it."""
+    resp = getattr(err, "response", None)
+    if resp is None:
+        return None
+    raw = resp.headers.get("retry-after")
+    try:
+        return float(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def with_retries(
     fn: Callable[[], T],
     *,
-    max_attempts: int = 4,
-    base_delay: float = 1.0,
+    max_attempts: int = 6,
+    base_delay: float = 2.0,
     sleep: Callable[[float], None] = time.sleep,
 ) -> T:
     """Call `fn()` and return its result, retrying on transient errors.
@@ -54,9 +66,13 @@ def with_retries(
     for attempt in range(max_attempts):
         try:
             return fn()
-        except RETRYABLE_ERRORS:
+        except RETRYABLE_ERRORS as err:
             if attempt == max_attempts - 1:
                 raise
-            delay = base_delay * (2 ** attempt)
-            delay += random.uniform(0, delay * 0.1)
+            hinted = _retry_after_seconds(err)
+            if hinted is not None:
+                delay = hinted + 0.25  # honor the server, plus a small cushion
+            else:
+                delay = base_delay * (2 ** attempt)
+                delay += random.uniform(0, delay * 0.1)
             sleep(delay)
