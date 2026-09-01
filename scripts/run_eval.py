@@ -21,10 +21,14 @@ def main() -> None:
     ap.add_argument("label")
     ap.add_argument("--k", type=int, default=6)
     ap.add_argument("--scoped", action="store_true", help="filter retrieval by company+fiscal_year")
+    ap.add_argument("--hybrid", action="store_true", help="fuse vector + keyword retrieval (RRF)")
     ap.add_argument("--sleep", type=float, default=1.0, help="seconds between items (raise for Groq)")
     args = ap.parse_args()
 
-    run = run_eval(args.label, k=args.k, scoped=args.scoped, sleep_between=args.sleep)
+    run = run_eval(
+        args.label, k=args.k, scoped=args.scoped, hybrid=args.hybrid,
+        sleep_between=args.sleep,
+    )
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "-", args.label.lower()).strip("-")

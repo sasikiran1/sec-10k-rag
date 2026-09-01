@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from sec10k.goldens import REFUSAL
 from sec10k.llm import ChatResult, chat
-from sec10k.search import Hit, search
+from sec10k.search import Hit, hybrid_search, search
 
 SYSTEM_PROMPT = (
     "You answer questions about SEC 10-K filings using ONLY the provided excerpts. "
@@ -25,21 +25,27 @@ class AnswerResult(BaseModel):
     chat: ChatResult      # carries tokens / latency / db_id for cost accounting
 
 
-def format_context(hits: list[Hit]) -> str:
-    """Render hits as a numbered context block for the prompt.
+CONTEXT_CHAR_BUDGET = 16000  # ~4k tokens; keeps the request under Groq's 8k/min
 
-    One entry per hit:
-        [1] (Apple Inc. FY2025, Item 8)
-        <chunk text>
 
-        [2] (...)
-        ...
-    Join entries with a blank line.
+def format_context(hits: list[Hit], *, char_budget: int = CONTEXT_CHAR_BUDGET) -> str:
+    """Render hits as a numbered context block, best-first, within a char budget.
+
+    Adds whole chunks in rank order until the next one wouldn't fit, then stops —
+    so tables stay intact and the prompt stays bounded. Always includes at least
+    the top hit.
     """
-    return "\n\n".join(
-        f"[{i + 1}] ({h.company} FY{h.fiscal_year}, {h.section})\n{h.text}"
-        for i, h in enumerate(hits)
-    )
+    parts: list[str] = []
+    used = 0
+    for i, h in enumerate(hits):
+        entry = f"[{i + 1}] ({h.company} FY{h.fiscal_year}, {h.section})\n{h.text}"
+        if parts and used + len(entry) > char_budget:
+            break
+        if not parts and len(entry) > char_budget:
+            entry = entry[:char_budget] + " …[truncated]"
+        parts.append(entry)
+        used += len(entry)
+    return "\n\n".join(parts)
 
 
 def answer(
@@ -49,6 +55,7 @@ def answer(
     tag: str = "answer",
     company: str | None = None,
     fiscal_year: int | None = None,
+    hybrid: bool = False,
 ) -> AnswerResult:
     """Retrieve k chunks for `question`, generate a grounded answer, return both.
 
@@ -66,7 +73,8 @@ def answer(
       4. return AnswerResult(question=question, answer=result.text.strip(),
                              hits=hits, chat=result)
     """
-    hits = search(question, k=k, company=company, fiscal_year=fiscal_year)
+    retrieve = hybrid_search if hybrid else search
+    hits = retrieve(question, k=k, company=company, fiscal_year=fiscal_year)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {

@@ -6,6 +6,8 @@ every later improvement (hybrid, rerank, decomposition) has to beat.
 """
 from __future__ import annotations
 
+from collections import defaultdict
+
 from pgvector import Vector
 from psycopg.rows import dict_row
 from pydantic import BaseModel
@@ -103,3 +105,93 @@ def search(
         conn.row_factory = dict_row
         rows = conn.execute(sql, params).fetchall()
     return [Hit(**row) for row in rows]
+
+
+_COLS = "id, source, ord, text, section, kind, company, accession, fiscal_year"
+
+
+def _filter_sql(company: str | None, fiscal_year: int | None, params: dict) -> str:
+    clauses = []
+    if company is not None:
+        clauses.append("company = %(company)s")
+        params["company"] = company
+    if fiscal_year is not None:
+        clauses.append("fiscal_year = %(fiscal_year)s")
+        params["fiscal_year"] = fiscal_year
+    return (" AND " + " AND ".join(clauses)) if clauses else ""
+
+
+def keyword_search(
+    query: str,
+    k: int = 5,
+    *,
+    company: str | None = None,
+    fiscal_year: int | None = None,
+) -> list[Hit]:
+    """Postgres full-text search over chunks.text (BM25-ish via ts_rank_cd).
+
+    Implementation:
+        params = {"q": query, "k": k}
+        sql = f'''
+            SELECT {_COLS}, ts_rank_cd(text_tsv, websearch_to_tsquery('english', %(q)s)) AS score
+            FROM chunks
+            WHERE text_tsv @@ websearch_to_tsquery('english', %(q)s)
+                  {_filter_sql(company, fiscal_year, params)}
+            ORDER BY score DESC
+            LIMIT %(k)s
+        '''
+        (dict_row) -> [Hit(**row) for row in rows]
+    """
+    params: dict = {"q": query, "k": k}
+    # websearch_to_tsquery ANDs every term; rewrite '&' -> '|' so a chunk matching
+    # ANY query term is a candidate, ranked by ts_rank_cd (term coverage + rarity).
+    sql = f"""
+        SELECT {_COLS}, ts_rank_cd(text_tsv, q.tsq) AS score
+        FROM chunks,
+             LATERAL (
+                 SELECT replace(websearch_to_tsquery('english', %(q)s)::text, '&', '|')::tsquery AS tsq
+             ) q
+        WHERE text_tsv @@ q.tsq
+              {_filter_sql(company, fiscal_year, params)}
+        ORDER BY score DESC
+        LIMIT %(k)s
+    """
+    with get_connection() as conn:
+        conn.row_factory = dict_row
+        rows = conn.execute(sql, params).fetchall()
+    return [Hit(**row) for row in rows]
+
+
+def hybrid_search(
+    query: str,
+    k: int = 5,
+    *,
+    company: str | None = None,
+    fiscal_year: int | None = None,
+    pool: int = 20,
+    rrf_k: int = 60,
+) -> list[Hit]:
+    """Fuse vector and keyword rankings with Reciprocal Rank Fusion.
+
+    Implementation:
+      1. v = search(query, k=pool, company=company, fiscal_year=fiscal_year)
+      2. t = keyword_search(query, k=pool, company=company, fiscal_year=fiscal_year)
+      3. by_id: dict[int, Hit] = {h.id: h for h in v + t}   # keep one Hit per id
+      4. score: dict[int, float] = defaultdict(float)
+         for lst in (v, t):
+             for rank, h in enumerate(lst, start=1):
+                 score[h.id] += 1.0 / (rrf_k + rank)
+      5. order ids by score descending, take the first k
+      6. return [by_id[i].model_copy(update={"score": score[i]}) for i in top_ids]
+    """
+    v = search(query, k=pool, company=company, fiscal_year=fiscal_year)
+    t = keyword_search(query, k=pool, company=company, fiscal_year=fiscal_year)
+
+    by_id: dict[int, Hit] = {h.id: h for h in v + t}
+    score: dict[int, float] = defaultdict(float)
+    for lst in (v, t):
+        for rank, h in enumerate(lst, start=1):
+            score[h.id] += 1.0 / (rrf_k + rank)
+
+    top_ids = sorted(score, key=score.get, reverse=True)[:k]
+    return [by_id[i].model_copy(update={"score": score[i]}) for i in top_ids]

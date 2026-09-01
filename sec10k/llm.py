@@ -34,6 +34,7 @@ class ChatResult(BaseModel):
     text: str
     record: LlmCall
     db_id: int
+    cached: bool = False   # True if the response came from sec10k.cache, not the API
 
 
 @lru_cache
@@ -101,6 +102,7 @@ def chat(
 
     ckey = cache.key_for(create_kwargs)
     data = cache.get(ckey)
+    was_cached = data is not None
     if data is None:
         resp = with_retries(lambda: _client().chat.completions.create(**create_kwargs))
         data = {
@@ -128,7 +130,7 @@ def chat(
     )
     text = data["content"]
     db_id = log_llm_call(record)
-    return ChatResult(text=text, record=record, db_id=db_id)
+    return ChatResult(text=text, record=record, db_id=db_id, cached=was_cached)
 
 
 def chat_structured(

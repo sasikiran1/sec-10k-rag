@@ -33,12 +33,14 @@ class ItemResult(BaseModel):
     reciprocal_rank: float | None
     answer_tokens: int
     judge_tokens: int
+    cached: bool = False   # both the answer and judge calls were cache hits
 
 
 class EvalRun(BaseModel):
     label: str
     k: int
     scoped: bool
+    hybrid: bool = False
     n: int
     timestamp: str
     accuracy: float
@@ -70,7 +72,9 @@ def score_retrieval(hits: list[Hit], golden: Golden) -> tuple[list[int], float, 
     return ranks, recall, rr
 
 
-def aggregate(label: str, k: int, scoped: bool, items: list[ItemResult]) -> EvalRun:
+def aggregate(
+    label: str, k: int, scoped: bool, items: list[ItemResult], *, hybrid: bool = False
+) -> EvalRun:
     """Roll ItemResults into an EvalRun.
 
       - accuracy         : fraction of items with correct == True
@@ -92,7 +96,7 @@ def aggregate(label: str, k: int, scoped: bool, items: list[ItemResult]) -> Eval
     mrr = sum(i.reciprocal_rank for i in scored) / len(scored) if scored else 0.0
 
     return EvalRun(
-        label=label, k=k, scoped=scoped, n=n,
+        label=label, k=k, scoped=scoped, hybrid=hybrid, n=n,
         timestamp=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         accuracy=accuracy, accuracy_by_kind=by_kind,
         recall_at_k=recall_at_k, mrr=mrr,
@@ -103,13 +107,13 @@ def aggregate(label: str, k: int, scoped: bool, items: list[ItemResult]) -> Eval
 
 # --- orchestration (already wired) ----------------------------------------
 
-def evaluate_item(golden: Golden, *, k: int, scoped: bool) -> ItemResult:
+def evaluate_item(golden: Golden, *, k: int, scoped: bool, hybrid: bool = False) -> ItemResult:
     company = golden.company if scoped else None
     fiscal_year = golden.fiscal_year if scoped else None
 
     res = answer(
         golden.question, k=k, tag=f"eval:{golden.id}:answer",
-        company=company, fiscal_year=fiscal_year,
+        company=company, fiscal_year=fiscal_year, hybrid=hybrid,
     )
     verdict, judge_chat = judge(
         golden.question, golden.answer, res.answer, tag=f"eval:{golden.id}:judge"
@@ -129,18 +133,26 @@ def evaluate_item(golden: Golden, *, k: int, scoped: bool) -> ItemResult:
         recall_at_k=recall, reciprocal_rank=rr,
         answer_tokens=res.chat.record.total_tokens,
         judge_tokens=judge_chat.record.total_tokens,
+        cached=res.chat.cached and judge_chat.cached,
     )
 
 
 def run_eval(
-    label: str, *, k: int = 6, scoped: bool = False, sleep_between: float = 1.0
+    label: str,
+    *,
+    k: int = 6,
+    scoped: bool = False,
+    hybrid: bool = False,
+    sleep_between: float = 1.0,
 ) -> EvalRun:
     """Evaluate every golden. `sleep_between` paces the loop to stay under the
     provider's rate limit (Groq free tier is ~8k tokens/min; raise it there)."""
     goldens = load_goldens()
     items: list[ItemResult] = []
     for n, g in enumerate(goldens):
-        items.append(evaluate_item(g, k=k, scoped=scoped))
-        if sleep_between and n < len(goldens) - 1:
+        item = evaluate_item(g, k=k, scoped=scoped, hybrid=hybrid)
+        items.append(item)
+        # No need to pace when the calls were served from cache.
+        if sleep_between and not item.cached and n < len(goldens) - 1:
             time.sleep(sleep_between)
-    return aggregate(label, k, scoped, items)
+    return aggregate(label, k, scoped, items, hybrid=hybrid)

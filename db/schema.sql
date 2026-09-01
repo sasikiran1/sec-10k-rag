@@ -46,3 +46,9 @@ CREATE TABLE IF NOT EXISTS chunks (
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
     ON chunks USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS chunks_accession_idx ON chunks (accession);
+
+-- Full-text search vector for hybrid (keyword + vector) retrieval.
+ALTER TABLE chunks
+    ADD COLUMN IF NOT EXISTS text_tsv tsvector
+    GENERATED ALWAYS AS (to_tsvector('english', text)) STORED;
+CREATE INDEX IF NOT EXISTS chunks_text_tsv_idx ON chunks USING gin (text_tsv);

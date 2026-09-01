@@ -25,6 +25,18 @@ def test_format_context_numbers_entries_and_keeps_text():
     assert "Apple Inc." in ctx and "FY2025" in ctx
 
 
+def test_format_context_respects_char_budget():
+    big = [_hit("x" * 5000, n) for n in range(6)]
+    ctx = format_context(big, char_budget=12000)
+    assert len(ctx) <= 12100          # a couple of whole chunks, not all six
+    assert ctx.count("FY2025") <= 3
+
+
+def test_format_context_always_includes_top_hit_even_if_huge():
+    ctx = format_context([_hit("y" * 40000, 1)], char_budget=1000)
+    assert "truncated" in ctx and len(ctx) < 1200
+
+
 @pytest.mark.live
 def test_answer_finds_a_known_figure():
     res = answer("What were Apple's total net sales for fiscal year 2023?")
