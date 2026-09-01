@@ -14,6 +14,7 @@ from typing import TypeVar
 from openai import OpenAI
 from pydantic import BaseModel
 
+from sec10k import cache
 from sec10k.config import get_settings
 from sec10k.db import LlmCall, log_llm_call
 from sec10k.retry import with_retries
@@ -98,22 +99,34 @@ def chat(
     if response_format is not None:
         create_kwargs["response_format"] = response_format
 
-    resp = with_retries(lambda: _client().chat.completions.create(**create_kwargs))
+    ckey = cache.key_for(create_kwargs)
+    data = cache.get(ckey)
+    if data is None:
+        resp = with_retries(lambda: _client().chat.completions.create(**create_kwargs))
+        data = {
+            "id": resp.id,
+            "model": resp.model,
+            "content": resp.choices[0].message.content,
+            "prompt_tokens": resp.usage.prompt_tokens,
+            "completion_tokens": resp.usage.completion_tokens,
+            "total_tokens": resp.usage.total_tokens,
+        }
+        cache.put(ckey, data)
+
     latency_ms = round((time.perf_counter() - start) * 1000)
-    text = resp.choices[0].message.content
-    usage = resp.usage
     record = LlmCall(
         provider=settings.llm_provider,
-        model=resp.model,
+        model=data["model"],
         tag=tag,
-        prompt_tokens=usage.prompt_tokens,
-        completion_tokens=usage.completion_tokens,
-        total_tokens=usage.total_tokens,
+        prompt_tokens=data["prompt_tokens"],
+        completion_tokens=data["completion_tokens"],
+        total_tokens=data["total_tokens"],
         cost_usd=0.0,
         latency_ms=latency_ms,
         temperature=0.0,
-        response_id=resp.id,
+        response_id=data["id"],
     )
+    text = data["content"]
     db_id = log_llm_call(record)
     return ChatResult(text=text, record=record, db_id=db_id)
 
