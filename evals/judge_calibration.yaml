@@ -1,0 +1,135 @@
+# NOTE: these `human` labels were applied by Claude (the coding assistant), not
+# by an independent human rater. That means this calibration measures judge-vs-
+# Claude agreement, not judge-vs-human agreement — a materially weaker claim.
+# Re-label independently before citing this number as judge validation.
+- id: aapl-fy23-net-sales
+  question: What were Apple's total net sales for fiscal year 2023?
+  gold: $383,285 million (about $383.3 billion)
+  predicted: $383,285 million
+  human: correct
+- id: aapl-fy23-rd-expense
+  question: How much did Apple spend on research and development in fiscal year 2023?
+  gold: $29,915 million (about $29.9 billion)
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: aapl-fy23-greater-china
+  question: What were Apple's net sales in Greater China for fiscal year 2023?
+  gold: $72,559 million
+  predicted: $72,559 million
+  human: correct
+- id: aapl-fy23-iphone-net-sales
+  question: What were Apple's iPhone net sales in fiscal year 2023?
+  gold: $200,583 million
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: aapl-fy23-buyback
+  question: How much common stock did Apple repurchase during fiscal year 2023?
+  gold: 471 million shares for $76.6 billion (excluding excise tax)
+  predicted: 471 million shares
+  human: correct
+- id: aapl-fy25-net-income
+  question: What was Apple's net income for fiscal year 2025?
+  gold: $112,010 million (about $112.0 billion)
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: aapl-fy25-rd-expense
+  question: What was Apple's research and development expense in fiscal year 2025?
+  gold: $34,550 million
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: aapl-fy25-buyback
+  question: How much did Apple spend repurchasing common stock in fiscal year 2025?
+  gold: $89.3 billion (402 million shares)
+  predicted: $89.3 billion
+  human: correct
+- id: aapl-net-sales-fy23-to-fy25
+  question: How did Apple's total net sales change from fiscal 2023 to fiscal 2025?
+  gold: Rose from $383,285 million in FY2023 to $416,161 million in FY2025, an increase of about $32.9
+    billion.
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: aapl-fy25-services-share
+  question: Approximately what share of Apple's total net sales in fiscal 2025 came from Services?
+  gold: About 26% ($109,158 million of $416,161 million).
+  predicted: ≈ 26 % of total net sales.
+  human: correct
+- id: msft-fy26-total-revenue
+  question: What was Microsoft's total revenue in fiscal year 2026?
+  gold: $331,839 million (about $331.8 billion)
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: msft-fy26-net-income
+  question: What was Microsoft's net income in fiscal year 2026?
+  gold: $133,749 million
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: msft-fy26-intelligent-cloud
+  question: What was the revenue of Microsoft's Intelligent Cloud segment in fiscal year 2026?
+  gold: $137,791 million
+  predicted: $137,791 million
+  human: correct
+- id: msft-revenue-fy25-to-fy26
+  question: By how much did Microsoft's total revenue grow from fiscal 2025 to fiscal 2026?
+  gold: From $281,724 million to $331,839 million, an increase of about $50.1 billion (18%).
+  predicted: $50.1 billion
+  human: correct
+- id: nvda-fy26-total-revenue
+  question: What was NVIDIA's total revenue for fiscal year 2026?
+  gold: $215,938 million (about $215.9 billion)
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: nvda-fy26-net-income
+  question: What was NVIDIA's net income for fiscal year 2026?
+  gold: $120,067 million
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: nvda-fy26-gross-margin
+  question: What was NVIDIA's gross margin percentage in fiscal year 2026?
+  gold: 71.1%
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: nvda-net-income-fy25-to-fy26
+  question: How did NVIDIA's net income change from fiscal 2025 to fiscal 2026?
+  gold: Increased from $72,880 million to $120,067 million, up about 65%.
+  predicted: NOT_IN_FILING
+  human: incorrect
+- id: nvda-fy26-h20-charge
+  question: What inventory-related charge weighed on NVIDIA's fiscal 2026 gross margin?
+  gold: A $4.5 billion charge associated with H20 excess inventory and purchase obligations.
+  predicted: $4.0 billion
+  human: incorrect
+- id: aapl-fy25-iphone-units
+  question: How many iPhone units did Apple sell in fiscal year 2025?
+  gold: NOT_IN_FILING
+  predicted: NOT_IN_FILING
+  human: correct
+- id: msft-fy26-ceo-comp
+  question: What was the total compensation of Microsoft's CEO for fiscal year 2026?
+  gold: NOT_IN_FILING
+  predicted: NOT_IN_FILING
+  human: correct
+- id: nvda-fy27-revenue
+  question: What was NVIDIA's total revenue for fiscal year 2027?
+  gold: NOT_IN_FILING
+  predicted: NOT_IN_FILING
+  human: correct
+- id: crafted-partial
+  question: How much common stock did Apple repurchase in FY2023?
+  gold: 471 million shares for $76.6 billion
+  predicted: 471 million shares
+  human: correct
+- id: crafted-wrong-unit
+  question: What were Apple's total net sales for FY2023?
+  gold: $383,285 million
+  predicted: $383,285
+  human: incorrect
+- id: crafted-rounded
+  question: What was NVIDIA's FY2026 revenue?
+  gold: $215,938 million
+  predicted: about $216 billion
+  human: correct
+- id: crafted-over-refuse
+  question: What was Microsoft's FY2026 net income?
+  gold: $133,749 million
+  predicted: NOT_IN_FILING
+  human: incorrect
