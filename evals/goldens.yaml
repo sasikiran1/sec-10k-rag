@@ -1,0 +1,187 @@
+# Evaluation golden set. Every answer here was verified against the real filing
+# text. Grow this toward ~120; keep the mix of kinds.
+#
+# kind:         single | multi_hop | comparison | refusal
+# must_contain: substrings that must ALL appear in one chunk for it to count as
+#               "relevant" when scoring retrieval. Empty for refusal items.
+
+- id: aapl-fy23-net-sales
+  question: What were Apple's total net sales for fiscal year 2023?
+  answer: "$383,285 million (about $383.3 billion)"
+  company: Apple Inc.
+  fiscal_year: 2023
+  kind: single
+  must_contain: ["Total net sales", "383,285"]
+  note: Item 7 net-sales tables and the income statement; also stated in Fiscal Year Highlights.
+
+- id: aapl-fy23-rd-expense
+  question: How much did Apple spend on research and development in fiscal year 2023?
+  answer: "$29,915 million (about $29.9 billion)"
+  company: Apple Inc.
+  fiscal_year: 2023
+  kind: single
+  must_contain: ["Research and development", "29,915"]
+
+- id: aapl-fy23-greater-china
+  question: What were Apple's net sales in Greater China for fiscal year 2023?
+  answer: "$72,559 million"
+  company: Apple Inc.
+  fiscal_year: 2023
+  kind: single
+  must_contain: ["Greater China", "72,559"]
+
+- id: aapl-fy23-iphone-net-sales
+  question: What were Apple's iPhone net sales in fiscal year 2023?
+  answer: "$200,583 million"
+  company: Apple Inc.
+  fiscal_year: 2023
+  kind: single
+  must_contain: ["iPhone", "200,583"]
+
+- id: aapl-fy23-buyback
+  question: How much common stock did Apple repurchase during fiscal year 2023?
+  answer: "471 million shares for $76.6 billion (excluding excise tax)"
+  company: Apple Inc.
+  fiscal_year: 2023
+  kind: single
+  must_contain: ["repurchased", "76.6 billion"]
+
+- id: aapl-fy25-net-income
+  question: What was Apple's net income for fiscal year 2025?
+  answer: "$112,010 million (about $112.0 billion)"
+  company: Apple Inc.
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Net income", "112,010"]
+
+- id: aapl-fy25-rd-expense
+  question: What was Apple's research and development expense in fiscal year 2025?
+  answer: "$34,550 million"
+  company: Apple Inc.
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Research and development", "34,550"]
+
+- id: aapl-fy25-buyback
+  question: How much did Apple spend repurchasing common stock in fiscal year 2025?
+  answer: "$89.3 billion (402 million shares)"
+  company: Apple Inc.
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["repurchased", "89.3 billion"]
+
+- id: aapl-net-sales-fy23-to-fy25
+  question: How did Apple's total net sales change from fiscal 2023 to fiscal 2025?
+  answer: "Rose from $383,285 million in FY2023 to $416,161 million in FY2025, an increase of about $32.9 billion."
+  company: Apple Inc.
+  fiscal_year: 2025
+  kind: comparison
+  must_contain: ["Total net sales", "416,161", "383,285"]
+  note: The FY2025 filing's tables carry the 2025/2024/2023 columns, so both figures are in one chunk.
+
+- id: aapl-fy25-services-share
+  question: Approximately what share of Apple's total net sales in fiscal 2025 came from Services?
+  answer: "About 26% ($109,158 million of $416,161 million)."
+  company: Apple Inc.
+  fiscal_year: 2025
+  kind: multi_hop
+  must_contain: ["Services", "109,158", "416,161"]
+
+- id: msft-fy26-total-revenue
+  question: What was Microsoft's total revenue in fiscal year 2026?
+  answer: "$331,839 million (about $331.8 billion)"
+  company: MICROSOFT CORP
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Total revenue", "331,839"]
+
+- id: msft-fy26-net-income
+  question: What was Microsoft's net income in fiscal year 2026?
+  answer: "$133,749 million"
+  company: MICROSOFT CORP
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Net income", "133,749"]
+
+- id: msft-fy26-intelligent-cloud
+  question: What was the revenue of Microsoft's Intelligent Cloud segment in fiscal year 2026?
+  answer: "$137,791 million"
+  company: MICROSOFT CORP
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Intelligent Cloud", "137,791"]
+
+- id: msft-revenue-fy25-to-fy26
+  question: By how much did Microsoft's total revenue grow from fiscal 2025 to fiscal 2026?
+  answer: "From $281,724 million to $331,839 million, an increase of about $50.1 billion (18%)."
+  company: MICROSOFT CORP
+  fiscal_year: 2026
+  kind: comparison
+  must_contain: ["Total revenue", "331,839", "281,724"]
+
+- id: nvda-fy26-total-revenue
+  question: What was NVIDIA's total revenue for fiscal year 2026?
+  answer: "$215,938 million (about $215.9 billion)"
+  company: NVIDIA CORP
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Revenue", "215,938"]
+
+- id: nvda-fy26-net-income
+  question: What was NVIDIA's net income for fiscal year 2026?
+  answer: "$120,067 million"
+  company: NVIDIA CORP
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Net income", "120,067"]
+
+- id: nvda-fy26-gross-margin
+  question: What was NVIDIA's gross margin percentage in fiscal year 2026?
+  answer: "71.1%"
+  company: NVIDIA CORP
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Gross margin", "71.1"]
+
+- id: nvda-net-income-fy25-to-fy26
+  question: How did NVIDIA's net income change from fiscal 2025 to fiscal 2026?
+  answer: "Increased from $72,880 million to $120,067 million, up about 65%."
+  company: NVIDIA CORP
+  fiscal_year: 2026
+  kind: comparison
+  must_contain: ["Net income", "120,067", "72,880"]
+
+- id: nvda-fy26-h20-charge
+  question: What inventory-related charge weighed on NVIDIA's fiscal 2026 gross margin?
+  answer: "A $4.5 billion charge associated with H20 excess inventory and purchase obligations."
+  company: NVIDIA CORP
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["4.5 billion", "H20"]
+
+- id: aapl-fy25-iphone-units
+  question: How many iPhone units did Apple sell in fiscal year 2025?
+  answer: NOT_IN_FILING
+  company: Apple Inc.
+  fiscal_year: 2025
+  kind: refusal
+  must_contain: []
+  note: Apple does not disclose unit sales in its 10-K.
+
+- id: msft-fy26-ceo-comp
+  question: What was the total compensation of Microsoft's CEO for fiscal year 2026?
+  answer: NOT_IN_FILING
+  company: MICROSOFT CORP
+  fiscal_year: 2026
+  kind: refusal
+  must_contain: []
+  note: Executive compensation is disclosed in the proxy statement, not the 10-K.
+
+- id: nvda-fy27-revenue
+  question: What was NVIDIA's total revenue for fiscal year 2027?
+  answer: NOT_IN_FILING
+  company: NVIDIA CORP
+  fiscal_year: 2026
+  kind: refusal
+  must_contain: []
+  note: The filing covers fiscal 2026; fiscal 2027 has not been reported.
