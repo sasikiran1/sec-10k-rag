@@ -25,7 +25,7 @@ def test_active_key_follows_provider():
     )
     assert s.active_api_key() == "gemini-key"
     assert s.active_base_url() == "https://generativelanguage.googleapis.com/v1beta/openai/"
-    assert s.active_model() == "gemini-2.0-flash"
+    assert s.active_model() == "gemini-3.6-flash"
 
 
 def test_missing_key_for_active_provider_raises():
