@@ -2,6 +2,9 @@
 first time). No calls to our LLM API.
 
     pytest tests/test_search.py -v
+
+These tests seed a handful of chunks under a private `source` and scope their
+assertions to those rows, so they hold whether or not a real corpus is loaded.
 """
 from __future__ import annotations
 
@@ -29,6 +32,10 @@ def _seed() -> None:
     ])
 
 
+def _mine(hits: list[Hit]) -> list[Hit]:
+    return [h for h in hits if h.source == SOURCE]
+
+
 def test_add_chunks_returns_count():
     assert add_chunks([(SOURCE, 0, "hello world")]) == 1
 
@@ -40,15 +47,29 @@ def test_search_returns_k_hits_of_the_right_type():
     assert all(isinstance(h, Hit) for h in hits)
 
 
-def test_most_relevant_chunk_ranks_first():
+def test_most_relevant_seeded_chunk_ranks_above_the_others():
     _seed()
-    hits = search("how much revenue did the company report", k=4)
-    assert "net revenue" in hits[0].text
+    mine = _mine(search("how much revenue did the company report", k=200))
+    assert mine, "seeded rows not returned at all"
+    assert "net revenue" in mine[0].text
 
 
 def test_scores_are_sorted_descending():
     _seed()
-    hits = search("dividend paid to shareholders", k=4)
+    hits = search("dividend paid to shareholders", k=200)
     scores = [h.score for h in hits]
     assert scores == sorted(scores, reverse=True)
-    assert "dividend" in hits[0].text
+    mine = _mine(hits)
+    assert mine and "dividend" in mine[0].text
+
+
+def test_company_filter_restricts_results(corpus):
+    hits = search("total revenue", k=10, company="MICROSOFT CORP")
+    assert hits, "expected Microsoft chunks"
+    assert all(h.company == "MICROSOFT CORP" for h in hits)
+
+
+def test_fiscal_year_filter_restricts_results(corpus):
+    hits = search("net sales", k=10, company="Apple Inc.", fiscal_year=2023)
+    assert hits
+    assert all(h.fiscal_year == 2023 and h.company == "Apple Inc." for h in hits)
