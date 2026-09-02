@@ -58,7 +58,7 @@ def answer(
     fiscal_year: int | None = None,
     hybrid: bool = False,
     rerank: bool = True,
-    rerank_pool: int = 25,
+    rerank_pool: int = 60,
 ) -> AnswerResult:
     """Retrieve k chunks for `question`, generate a grounded answer, return both.
 
