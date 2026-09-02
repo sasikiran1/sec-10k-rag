@@ -17,18 +17,9 @@ class CalibrationReport(BaseModel):
 
 
 def score_agreement(rows: list[tuple[str, bool, bool]]) -> CalibrationReport:
-    """rows are (id, human_correct, judge_correct).
-
-    - agreement = fraction of rows where human_correct == judge_correct
-    - kappa:
-        po = agreement (observed)
-        For each label L in {True, False}:
-            p_human_L = fraction of rows where human_correct == L
-            p_judge_L = fraction of rows where judge_correct == L
-        pe = sum over L of (p_human_L * p_judge_L)          # chance agreement
-        kappa = (po - pe) / (1 - pe)     (define kappa = 1.0 if pe == 1.0)
-    - disagreements = [id for rows where human != judge]
-    """
+    """`rows` are (id, human_correct, judge_correct). Returns raw agreement plus
+    Cohen's kappa: (observed - chance) / (1 - chance), where chance agreement is
+    sum over both labels of P(human=L) * P(judge=L). kappa is 1.0 when chance is 1.0."""
     n = len(rows)
     agree = sum(1 for _, h, j in rows if h == j)
     po = agree / n

@@ -52,7 +52,7 @@ class EvalRun(BaseModel):
     items: list[ItemResult]
 
 
-# --- metrics you implement --------------------------------------------------
+# --- metrics ---------------------------------------------------------------
 
 def is_relevant(hit: Hit, golden: Golden) -> bool:
     """True iff `hit.text` contains every string in `golden.must_contain`."""
@@ -60,13 +60,8 @@ def is_relevant(hit: Hit, golden: Golden) -> bool:
 
 
 def score_retrieval(hits: list[Hit], golden: Golden) -> tuple[list[int], float, float]:
-    """Score one question's retrieval.
-
-    Returns (relevant_ranks, recall_at_k, reciprocal_rank):
-      - relevant_ranks : 1-indexed positions in `hits` where is_relevant() is True
-      - recall_at_k    : 1.0 if relevant_ranks is non-empty else 0.0
-      - reciprocal_rank: 1 / first relevant rank, else 0.0
-    """
+    """-> (relevant_ranks, recall_at_k, reciprocal_rank). recall_at_k is 1.0 if any
+    hit is relevant; reciprocal_rank is 1 / the first relevant rank (0 if none)."""
     ranks = [i for i, h in enumerate(hits, start=1) if is_relevant(h, golden)]
     recall = 1.0 if ranks else 0.0
     rr = 1.0 / ranks[0] if ranks else 0.0
@@ -77,14 +72,8 @@ def aggregate(
     label: str, k: int, scoped: bool, items: list[ItemResult], *,
     hybrid: bool = False, rerank: bool = False,
 ) -> EvalRun:
-    """Roll ItemResults into an EvalRun.
-
-      - accuracy         : fraction of items with correct == True
-      - accuracy_by_kind : same, grouped by item.kind
-      - recall_at_k, mrr : mean over items whose recall_at_k is not None
-      - total_tokens     : sum of answer_tokens + judge_tokens
-      - timestamp        : datetime.now(timezone.utc).isoformat(timespec="seconds")
-    """
+    """Roll ItemResults into an EvalRun. recall_at_k / mrr average only the items
+    that have a retrieval score (non-refusal); accuracy covers all items."""
     n = len(items)
     accuracy = sum(i.correct for i in items) / n if n else 0.0
 

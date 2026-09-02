@@ -24,16 +24,8 @@ def _model() -> SentenceTransformer:
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Embed many texts at once.
-
-    Returns one 384-float list per input, in the same order. Use the batch form
-    whenever you have more than one string — the model vectorizes a batch far
-    faster than N single calls.
-
-    Implementation:
-        arr = _model().encode(texts, normalize_embeddings=True)
-        return [row.tolist() for row in arr]   # plain python floats, no numpy leaking out
-    """
+    """Embed many texts at once -> one L2-normalized 384-float list each, same
+    order. Prefer this over N single calls; batching is much faster."""
     arr = _model().encode(texts, normalize_embeddings=True)
     return [row.tolist() for row in arr]
 

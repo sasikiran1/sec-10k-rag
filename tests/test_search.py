@@ -49,14 +49,14 @@ def test_search_returns_k_hits_of_the_right_type():
 
 def test_most_relevant_seeded_chunk_ranks_above_the_others():
     _seed()
-    mine = _mine(search("how much revenue did the company report", k=200))
+    mine = _mine(search("how much revenue did the company report", k=5000))
     assert mine, "seeded rows not returned at all"
     assert "net revenue" in mine[0].text
 
 
 def test_scores_are_sorted_descending():
     _seed()
-    hits = search("dividend paid to shareholders", k=200)
+    hits = search("dividend paid to shareholders", k=5000)
     scores = [h.score for h in hits]
     assert scores == sorted(scores, reverse=True)
     mine = _mine(hits)

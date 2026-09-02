@@ -36,15 +36,7 @@ class FilingRef(BaseModel):
 
 def _get(url: str) -> bytes:
     """GET `url` with the SEC-required User-Agent header; return the raw body.
-
-    Steps:
-      1. time.sleep(0.15)   # stay well under 10 req/s
-      2. req = urllib.request.Request(
-             url, headers={"User-Agent": get_settings().sec_user_agent}
-         )
-      3. with urllib.request.urlopen(req, timeout=30) as resp:
-             return resp.read()
-    """
+    Sleeps 0.15s first to stay well under SEC's 10 req/s limit."""
     time.sleep(0.15)
     req = urllib.request.Request(
         url, headers={"User-Agent": get_settings().sec_user_agent}
@@ -54,15 +46,8 @@ def _get(url: str) -> bytes:
 
 
 def cik_for_ticker(ticker: str) -> int:
-    """Map a stock ticker to its CIK (case-insensitive).
-
-    _get(_TICKERS_URL) is JSON like:
-        {"0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."}, ...}
-
-    Parse it (json.loads), scan the values for one whose "ticker" equals
-    `ticker` uppercased, return its "cik_str" as an int.
-    Raise LookupError(ticker) if nothing matches.
-    """
+    """Map a stock ticker to its CIK via SEC's company_tickers.json.
+    Raises LookupError if the ticker isn't listed."""
     table = json.loads(_get(_TICKERS_URL))
     wanted = ticker.upper()
     for entry in table.values():
@@ -72,28 +57,9 @@ def cik_for_ticker(ticker: str) -> int:
 
 
 def latest_10k(cik: int, *, ticker: str = "", before: str | None = None) -> FilingRef:
-    """Build a FilingRef for the most recent 10-K filed by `cik`.
-
-    data = json.loads(_get(_SUBMISSIONS_URL.format(cik=cik)))
-    Useful keys:
-        data["name"]                                  -> company name (str)
-        recent = data["filings"]["recent"]
-        recent["form"]            -> list[str]   ("10-K", "8-K", "4", ...)
-        recent["accessionNumber"] -> list[str]   (dashed)
-        recent["filingDate"]      -> list[str]   (ISO)
-        recent["reportDate"]      -> list[str]   (ISO)
-        recent["primaryDocument"] -> list[str]
-
-    These are PARALLEL arrays: index i describes one filing. Walk i in order
-    (index 0 is newest). Take the first i where recent["form"][i] == "10-K"
-    and, if `before` is given, recent["filingDate"][i] < before.
-
-    doc_url = _ARCHIVE_URL.format(
-        cik=cik,
-        accession=accession.replace("-", ""),
-        doc=primary_doc,
-    )
-    Raise LookupError if there is no matching 10-K.
+    """Build a FilingRef for the most recent 10-K filed by `cik` (optionally the
+    most recent filed before the ISO date `before`). SEC's submissions JSON stores
+    filings as parallel arrays, newest first. Raises LookupError if there's none.
     """
     data = json.loads(_get(_SUBMISSIONS_URL.format(cik=cik)))
     recent = data["filings"]["recent"]
@@ -126,13 +92,8 @@ def latest_10k(cik: int, *, ticker: str = "", before: str | None = None) -> Fili
 
 
 def download_filing(ref: FilingRef, dest_dir: str | Path = "data/filings") -> Path:
-    """Download ref.doc_url to {dest_dir}/{ref.accession}.html and return that Path.
-
-    - Path(dest_dir).mkdir(parents=True, exist_ok=True)
-    - If the target file already exists, return it without re-downloading
-      (filings are immutable once accepted).
-    - Otherwise _get(ref.doc_url) and write the bytes.
-    """
+    """Download ref.doc_url to {dest_dir}/{ref.accession}.html and return the Path.
+    No-op if the file already exists (filings are immutable once accepted)."""
     dest = Path(dest_dir)
     dest.mkdir(parents=True, exist_ok=True)
     path = dest / f"{ref.accession}.html"

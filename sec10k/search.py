@@ -32,23 +32,8 @@ class Hit(BaseModel):
 
 
 def add_chunks(rows: list[tuple[str, int, str]]) -> int:
-    """Insert chunks. Each row is (source, ord, text); the embedding is computed here.
-    Returns the number of rows inserted.
-
-    Implementation:
-      1. texts   = [text for (_src, _ord, text) in rows]
-      2. vectors = embed_texts(texts)
-      3. params  = [(src, ord_, text, vec)
-                    for (src, ord_, text), vec in zip(rows, vectors)]
-      4. with get_connection() as conn:
-             with conn.cursor() as cur:
-                 cur.executemany(
-                     "INSERT INTO chunks (source, ord, text, embedding) "
-                     "VALUES (%s, %s, %s, %s)",
-                     params,
-                 )
-      5. return len(rows)
-    """
+    """Insert (source, ord, text) rows, embedding the text here. Returns the count.
+    Filing metadata columns are left NULL — see sec10k.ingest for the real path."""
     texts = [text for (_src, _ord, text) in rows]
     vectors = embed_texts(texts)
     params = [
@@ -128,20 +113,7 @@ def keyword_search(
     company: str | None = None,
     fiscal_year: int | None = None,
 ) -> list[Hit]:
-    """Postgres full-text search over chunks.text (BM25-ish via ts_rank_cd).
-
-    Implementation:
-        params = {"q": query, "k": k}
-        sql = f'''
-            SELECT {_COLS}, ts_rank_cd(text_tsv, websearch_to_tsquery('english', %(q)s)) AS score
-            FROM chunks
-            WHERE text_tsv @@ websearch_to_tsquery('english', %(q)s)
-                  {_filter_sql(company, fiscal_year, params)}
-            ORDER BY score DESC
-            LIMIT %(k)s
-        '''
-        (dict_row) -> [Hit(**row) for row in rows]
-    """
+    """Postgres full-text search over chunks.text (BM25-ish via ts_rank_cd)."""
     params: dict = {"q": query, "k": k}
     # websearch_to_tsquery ANDs every term; rewrite '&' -> '|' so a chunk matching
     # ANY query term is a candidate, ranked by ts_rank_cd (term coverage + rarity).
@@ -171,19 +143,9 @@ def hybrid_search(
     pool: int = 20,
     rrf_k: int = 60,
 ) -> list[Hit]:
-    """Fuse vector and keyword rankings with Reciprocal Rank Fusion.
-
-    Implementation:
-      1. v = search(query, k=pool, company=company, fiscal_year=fiscal_year)
-      2. t = keyword_search(query, k=pool, company=company, fiscal_year=fiscal_year)
-      3. by_id: dict[int, Hit] = {h.id: h for h in v + t}   # keep one Hit per id
-      4. score: dict[int, float] = defaultdict(float)
-         for lst in (v, t):
-             for rank, h in enumerate(lst, start=1):
-                 score[h.id] += 1.0 / (rrf_k + rank)
-      5. order ids by score descending, take the first k
-      6. return [by_id[i].model_copy(update={"score": score[i]}) for i in top_ids]
-    """
+    """Fuse the vector and keyword rankings with Reciprocal Rank Fusion:
+    each chunk scores sum(1 / (rrf_k + rank)) across the two lists.
+    (Measured worse than vector alone — kept for the ablation. See evals/ablation.md.)"""
     v = search(query, k=pool, company=company, fiscal_year=fiscal_year)
     t = keyword_search(query, k=pool, company=company, fiscal_year=fiscal_year)
 

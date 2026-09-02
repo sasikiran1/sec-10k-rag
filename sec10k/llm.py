@@ -58,37 +58,9 @@ def chat(
     tag: str | None = None,
     response_format: dict | None = None,
 ) -> ChatResult:
-    """Send `messages` to the active model at temperature 0, log the call, return it.
-
-    `messages` is a list of {"role": ..., "content": ...} dicts, exactly the shape
-    the API wants (roles: "system", "user", "assistant").
-
-    Steps to implement:
-      1. settings = get_settings()
-      2. Read the clock:  start = time.perf_counter()
-      3. resp = _client().chat.completions.create(
-             model=settings.active_model(),
-             temperature=0,
-             messages=messages,
-         )
-      4. latency_ms = round((time.perf_counter() - start) * 1000)
-      5. Pull out:
-           text  = resp.choices[0].message.content
-           usage = resp.usage
-      6. Build an LlmCall(...) with:
-           provider=settings.llm_provider,
-           model=resp.model,            # what the server actually used
-           tag=tag,
-           prompt_tokens=usage.prompt_tokens,
-           completion_tokens=usage.completion_tokens,
-           total_tokens=usage.total_tokens,
-           cost_usd=0.0,                # free tier for now; real rates come later
-           latency_ms=latency_ms,
-           temperature=0.0,
-           response_id=resp.id,
-      7. db_id = log_llm_call(record)
-      8. return ChatResult(text=text, record=record, db_id=db_id)
-    """
+    """Send `messages` (list of {"role", "content"}) to the active model at
+    temperature 0. Serves from the response cache when possible, retries transient
+    errors, writes one llm_calls row, and returns the answer + that record."""
     settings = get_settings()
     start = time.perf_counter()
 
@@ -133,33 +105,6 @@ def chat(
     return ChatResult(text=text, record=record, db_id=db_id, cached=was_cached)
 
 
-def chat_structured(
-    messages: list[dict[str, str]],
-    schema: type[M],
-    *,
-    tag: str | None = None,
-) -> tuple[M, ChatResult]:
-    """Ask the model to fill in `schema`; return (parsed_object, raw_chat_result).
-
-    This is the NO-SAFETY-NET version. If the model returns anything that isn't
-    exactly one JSON object of the right shape, this raises. That failure is the
-    point — it's what the repair loop (next) exists to handle.
-
-    Steps to implement:
-      1. Build an instruction message:
-             instruction = {
-                 "role": "system",
-                 "content": (
-                     "Return ONE JSON object and nothing else - no prose, no "
-                     "markdown fences. It must match this JSON Schema:\n"
-                     + json.dumps(schema.model_json_schema())
-                 ),
-             }
-      2. result = chat([*messages, instruction], tag=tag)
-      3. payload = json.loads(result.text)        # raises json.JSONDecodeError on non-JSON
-      4. obj = schema.model_validate(payload)     # raises pydantic.ValidationError on wrong shape
-      5. return obj, result
-    """
 class StructuredOutputError(RuntimeError):
     """The model never produced JSON matching the schema, even after repair attempts."""
 

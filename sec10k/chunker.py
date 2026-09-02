@@ -1,8 +1,8 @@
 """Turn a 10-K's HTML into retrievable chunks.
 
-Two chunkers live here. `chunk_fixed` is the naive baseline — a fixed-size sliding
-window over stripped text. It exists to be measured against and to show, on a real
-filing, how blind splitting shreds tables. The structure-aware chunker comes next.
+Structure-aware: tables are rendered whole (never split mid-grid), prose is packed
+to a size target, and every chunk is tagged with the "Item N" section it's under.
+(The naive fixed-window baseline this replaced is in git history, session 4.)
 """
 from __future__ import annotations
 
@@ -17,51 +17,6 @@ from pydantic import BaseModel
 # Modern 10-Ks are inline-XBRL (XHTML). We parse them as HTML on purpose; the
 # warning about that is just noise here.
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
-
-
-def html_to_text(html: str) -> str:
-    """Strip HTML tags to plain text.
-
-    Deliberately crude for now: this flattens tables into runs of numbers with no
-    column headers attached — which is part of what we want to see fail.
-
-        soup = BeautifulSoup(html, "lxml")
-        for tag in soup(["script", "style"]):
-            tag.decompose()
-        return soup.get_text(separator=" ", strip=True)
-    """
-    soup = BeautifulSoup(html, "lxml")
-    for tag in soup(["script", "style"]):
-        tag.decompose()
-    return soup.get_text(separator=" ", strip=True)
-
-def chunk_fixed(text: str, *, size: int = 1200, overlap: int = 150) -> list[str]:
-    """Naive chunker: slide a `size`-character window with `overlap` between windows.
-
-    - Start at 0. Each chunk is text[start : start + size].
-    - Next start = start + size - overlap  (so consecutive chunks share `overlap` chars).
-    - Stop once start >= len(text).
-    - Drop a trailing chunk that is only whitespace.
-    - For text shorter than `size`, return [text] (one chunk).
-
-    No awareness of sentences, tables, or headings — that's the point.
-    """
-    if len(text) <= size:
-        return [text]
-    chunks: list[str] = []
-    start = 0
-    step = size - overlap
-    while start < len(text):
-        piece = text[start : start + size]
-        if piece.strip():
-            chunks.append(piece)
-        start += step
-    return chunks
-
-
-# --------------------------------------------------------------------------------
-# Structure-aware chunker
-# --------------------------------------------------------------------------------
 
 # Matches a 10-K section heading like "Item 1.", "Item 1A.", "Item 7A."
 _ITEM_RE = re.compile(r"^\s*Item\s+(\d{1,2}[A-Z]?)\.?\s", re.IGNORECASE)
@@ -104,19 +59,9 @@ def render_table(table: Tag) -> str:
 def html_to_blocks(html: str) -> list[Block]:
     """Parse HTML into ordered Blocks, keeping tables intact.
 
-    Implementation sketch:
-      1. soup = BeautifulSoup(html, "lxml"); drop <script>/<style>.
-      2. For every <table> tag: rendered = render_table(table); replace the tag
-         with a sentinel string so it survives get_text:
-             table.replace_with(soup.new_string(f"\\n@@TABLE\\n{rendered}\\n@@ENDTABLE\\n"))
-      3. lines = soup.get_text("\\n").splitlines()
-      4. Walk lines, tracking `section` (update it whenever a line matches _ITEM_RE:
-         section = f"Item {m.group(1).upper()}").
-           - Between @@TABLE and @@ENDTABLE: collect into a table buffer, then emit
-             one Block(kind="table", text="\\n".join(buffer), section=section).
-           - Otherwise: accumulate non-blank lines into a prose buffer; on a blank
-             line (or section change) flush the buffer to Block(kind="text", ...).
-      5. Skip prose blocks whose stripped text is shorter than ~2 chars.
+    Each <table> is rendered by render_table() and fenced with @@TABLE/@@ENDTABLE
+    sentinels so it survives get_text() as one unit; prose between sentinels is
+    split on blank lines and section changes. `section` tracks the last "Item N".
     """
     soup = BeautifulSoup(html, "lxml")
     for tag in soup(["script", "style"]):
@@ -172,43 +117,9 @@ def html_to_blocks(html: str) -> list[Block]:
 
 
 def chunk_structured(blocks: list[Block], *, target_chars: int = 1500) -> list[Chunk]:
-    """Pack Blocks into Chunks.
-
-    Rules:
-      - A "table" block becomes exactly one Chunk(kind="table") on its own.
-      - "text" blocks accumulate into a Chunk(kind="prose") until the running
-        length reaches target_chars, then flush.
-      - Never let a chunk span two sections: flush when block.section changes.
-      - Every chunk's text starts with a "[<section>]" line (use "[document]" when
-        section is "").
-
-    Sketch:
-        chunks, buf, buf_section = [], [], None
-
-        def flush():
-            if buf:
-                label = buf_section or "document"
-                body = "\\n\\n".join(buf)
-                chunks.append(Chunk(section=buf_section or "", kind="prose",
-                                    text=f"[{label}]\\n{body}"))
-                buf.clear()
-
-        for b in blocks:
-            if b.kind == "table":
-                flush()
-                label = b.section or "document"
-                chunks.append(Chunk(section=b.section, kind="table",
-                                    text=f"[{label}]\\n{b.text}"))
-                continue
-            if buf and b.section != buf_section:
-                flush()
-            buf_section = b.section
-            buf.append(b.text)
-            if sum(len(x) for x in buf) >= target_chars:
-                flush()
-        flush()
-        return chunks
-    """
+    """Pack Blocks into Chunks. Each table block is its own Chunk; text blocks
+    accumulate up to `target_chars` then flush. A chunk never spans two sections,
+    and every chunk's text starts with a "[<section>]" line."""
     chunks: list[Chunk] = []
     buf: list[str] = []
     buf_section: str | None = None

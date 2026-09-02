@@ -42,27 +42,10 @@ def with_retries(
     base_delay: float = 2.0,
     sleep: Callable[[float], None] = time.sleep,
 ) -> T:
-    """Call `fn()` and return its result, retrying on transient errors.
-
-    - Try `fn()` up to `max_attempts` times total.
-    - If it raises something that IS a RETRYABLE_ERRORS instance and attempts
-      remain: wait, then try again. The wait after attempt number n (counting
-      from 0) is `base_delay * (2 ** n)` seconds plus up to 10% random jitter.
-    - If it raises anything else: let that exception propagate now, no retry.
-    - If the final attempt also fails with a retryable error: re-raise it.
-    - `sleep` is a parameter only so tests can pass a no-op instead of waiting.
-
-    Pseudocode:
-        for attempt in 0 .. max_attempts - 1:
-            try:
-                return fn()
-            except <a RETRYABLE error> as err:
-                if attempt is the last one:
-                    raise
-                delay = base_delay * 2**attempt, plus random jitter up to 10%
-                sleep(delay)
-            # a non-retryable error isn't caught here, so it propagates by itself
-    """
+    """Call `fn()`, retrying only on RETRYABLE_ERRORS. Waits the server's
+    Retry-After hint if present, else `base_delay * 2**attempt` + <=10% jitter.
+    Re-raises anything non-retryable immediately, and the last error if all
+    attempts fail. `sleep` is injectable so tests don't actually wait."""
     for attempt in range(max_attempts):
         try:
             return fn()

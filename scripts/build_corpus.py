@@ -1,11 +1,12 @@
-"""Ingest the fixed evaluation corpus.
+"""Ingest 10-K filings into the chunks table.
 
-    python scripts/build_corpus.py
+    python scripts/build_corpus.py            # the fixed evaluation corpus
+    python scripts/build_corpus.py AAPL MSFT  # ad-hoc: latest 10-K for each ticker
 
-A small, varied set: three companies with different fiscal-year ends, plus one
-prior-year Apple filing so the golden set can include cross-year comparisons.
 Re-runnable — each filing is replaced, not duplicated.
 """
+import sys
+
 from sec10k.ingest import ingest_ticker
 
 # (ticker, before, cik)  -- `before` picks the newest 10-K filed before that date;
@@ -26,7 +27,8 @@ FILINGS = [
 
 
 def main() -> None:
-    for ticker, before, cik in FILINGS:
+    filings = [(t.upper(), None, None) for t in sys.argv[1:]] or FILINGS
+    for ticker, before, cik in filings:
         r = ingest_ticker(ticker, before=before, cik=cik, replace=True)
         tag = "" if before is None else f" (before {before})"
         print(f"{ticker:6}{tag:20} {r.company:30} FY{r.fiscal_year}  "

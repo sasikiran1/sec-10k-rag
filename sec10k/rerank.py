@@ -24,15 +24,8 @@ def _model() -> CrossEncoder:
 
 
 def rerank(query: str, hits: list[Hit], *, top_k: int) -> list[Hit]:
-    """Re-score `hits` against `query` with the cross-encoder; return the top_k.
-
-    Implementation:
-      1. if not hits: return []
-      2. pairs  = [(query, h.text) for h in hits]
-      3. scores = _model().predict(pairs)                 # np array, higher = better
-      4. ranked = sorted(zip(hits, scores), key=lambda hs: hs[1], reverse=True)
-      5. return [h.model_copy(update={"score": float(s)}) for h, s in ranked[:top_k]]
-    """
+    """Re-score `hits` against `query` with the cross-encoder; return the top_k
+    with the CE relevance score on `.score`."""
     if not hits:
         return []
     pairs = [(query, h.text) for h in hits]

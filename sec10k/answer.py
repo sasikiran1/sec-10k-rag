@@ -60,22 +60,9 @@ def answer(
     rerank: bool = True,
     rerank_pool: int = 60,
 ) -> AnswerResult:
-    """Retrieve k chunks for `question`, generate a grounded answer, return both.
-
-    `company` / `fiscal_year` are passed through to search() to scope retrieval to
-    one filing (the eval uses this to measure metadata filtering as its own step).
-
-    Steps:
-      1. hits = search(question, k=k, company=company, fiscal_year=fiscal_year)
-      2. messages = [
-             {"role": "system", "content": SYSTEM_PROMPT},
-             {"role": "user", "content":
-                 f"Excerpts:\n{format_context(hits)}\n\nQuestion: {question}"},
-         ]
-      3. result = chat(messages, tag=tag)
-      4. return AnswerResult(question=question, answer=result.text.strip(),
-                             hits=hits, chat=result)
-    """
+    """Retrieve chunks for `question` (vector, optionally hybrid, optionally
+    cross-encoder reranked from a `rerank_pool`), build a grounded prompt, and
+    generate. `company` / `fiscal_year` scope retrieval to one filing."""
     retrieve = hybrid_search if hybrid else search
     if rerank:
         pool = retrieve(question, k=rerank_pool, company=company, fiscal_year=fiscal_year)
