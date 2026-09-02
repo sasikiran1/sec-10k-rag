@@ -5,55 +5,137 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>sec-10k-rag</title>
 <style>
-  :root { color-scheme: light dark; --line: #8883; }
+  :root {
+    --bg: #fbfbfa;      --panel: #fff;       --ink: #1a1a1a;    --muted: #6b6b6b;
+    --line: #e6e4e0;     --accent: #2b6cb0;   --accent-soft: #ebf3fb;
+    --good: #2f855a;     --mid: #b7791f;      --low: #9b9b9b;
+    --err-bg: #fdecec;   --err-ink: #9b2c2c;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a;    --panel: #1e2024;   --ink: #eceef0;    --muted: #9aa0a6;
+      --line: #303338;  --accent: #6ba7e0;  --accent-soft: #1c2937;
+      --good: #68d391;  --mid: #f6ad55;     --low: #7a7f86;
+      --err-bg: #3a1f1f; --err-ink: #f5b5b5;
+    }
+  }
   * { box-sizing: border-box; }
-  body { max-width: 780px; margin: 2rem auto; padding: 0 1rem;
-         font: 15px/1.55 system-ui, sans-serif; }
-  h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
-  p.sub { margin: 0 0 1.5rem; opacity: .65; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+
+  header h1 { font-size: 1.35rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
+  header p { margin: 0 0 2rem; color: var(--muted); }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 1rem;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
+  .chip {
+    font-size: .82rem; padding: .35rem .7rem; border: 1px solid var(--line);
+    border-radius: 999px; background: transparent; color: var(--muted);
+    cursor: pointer; white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--ink); }
+
   form { display: flex; flex-wrap: wrap; gap: .5rem; }
-  input[type=text] { flex: 1 1 100%; padding: .6rem .7rem; font: inherit;
-                     border: 1px solid var(--line); border-radius: 8px; background: transparent; }
-  select, button { padding: .55rem .7rem; font: inherit; border: 1px solid var(--line);
-                   border-radius: 8px; background: Canvas; color: CanvasText; }
-  option { background: Canvas; color: CanvasText; }
-  button { cursor: pointer; font-weight: 600; }
-  button:disabled { opacity: .5; cursor: default; }
-  #answer { margin: 1.5rem 0 .5rem; padding: 1rem; border: 1px solid var(--line);
-            border-radius: 10px; white-space: pre-wrap; font-size: 1.05rem; }
-  #meta { opacity: .6; font-size: .85rem; margin-bottom: 1.5rem; }
-  .hit { border: 1px solid var(--line); border-radius: 10px; padding: .7rem .8rem;
-         margin-bottom: .6rem; }
-  .hit-head { display: flex; gap: .5rem; align-items: center; font-size: .8rem;
-              opacity: .8; margin-bottom: .4rem; flex-wrap: wrap; }
-  .tag { border: 1px solid var(--line); border-radius: 6px; padding: .05rem .4rem; }
-  .score { font-variant-numeric: tabular-nums; font-weight: 700; opacity: 1; }
-  .hit pre { margin: 0; white-space: pre-wrap; font: 12.5px/1.5 ui-monospace, monospace;
-             max-height: 8.5rem; overflow: auto; }
+  #q {
+    flex: 1 1 100%; padding: .7rem .8rem; font: inherit; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+  }
+  #q:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  select {
+    flex: 1 1 auto; min-width: 0; padding: .6rem .7rem; font: inherit;
+    color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+  }
+  button.go {
+    flex: 0 0 auto; padding: .6rem 1.3rem; font: inherit; font-weight: 600;
+    color: #fff; background: var(--accent); border: none; border-radius: 9px; cursor: pointer;
+  }
+  button.go:disabled { opacity: .55; cursor: default; }
+
+  #out { margin-top: 1.75rem; }
+  .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .09em;
+           color: var(--muted); margin-bottom: .4rem; }
+
+  #answer {
+    font-size: 1.15rem; line-height: 1.55; white-space: pre-wrap;
+    padding: 1.1rem 1.2rem; background: var(--accent-soft);
+    border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  #answer.err { background: var(--err-bg); color: var(--err-ink); font-size: 1rem; }
+  #answer.loading { color: var(--muted); font-size: 1rem; }
+
+  #meta { margin: .6rem 0 1.6rem; font-size: .82rem; color: var(--muted);
+          display: flex; gap: .55rem; flex-wrap: wrap; align-items: center; }
+  .badge { border: 1px solid var(--line); border-radius: 6px; padding: .05rem .45rem; }
+  .badge.cached { color: var(--good); border-color: currentColor; }
+
+  .hit { border: 1px solid var(--line); border-left: 3px solid var(--score-c, var(--low));
+         border-radius: 10px; padding: .75rem .85rem; margin-bottom: .6rem; background: var(--panel); }
+  .hit-top { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
+  .rank { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .relbar { flex: 0 0 84px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .relbar > i { display: block; height: 100%; background: var(--score-c, var(--low)); }
+  .tag { font-size: .74rem; color: var(--muted); border: 1px solid var(--line);
+         border-radius: 5px; padding: .03rem .4rem; }
+  .toggle { margin-left: auto; border: none; background: transparent; color: var(--accent);
+            font: inherit; font-size: .8rem; cursor: pointer; padding: 0; }
+  .hit pre { margin: 0; font: 12.5px/1.55 ui-monospace, "SF Mono", Menlo, monospace;
+             white-space: pre-wrap; color: var(--ink); max-height: 7rem; overflow: hidden;
+             position: relative; }
   .hit.open pre { max-height: none; }
-  .hit-head button { border: none; background: transparent; padding: 0; margin-left: auto;
-                     opacity: .7; cursor: pointer; font: inherit; }
+  .hit:not(.open) pre::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2rem;
+    background: linear-gradient(transparent, var(--panel));
+  }
 </style>
 </head>
 <body>
-  <h1>sec-10k-rag</h1>
-  <p class="sub">Ask about a SEC 10-K. The answer is generated only from the chunks shown below it.</p>
+<div class="wrap">
+  <header>
+    <h1>sec-10k-rag</h1>
+    <p>Ask about a SEC 10-K filing. The answer is generated <em>only</em> from the chunks retrieved below it.</p>
+  </header>
 
-  <form id="f">
-    <input type="text" id="q" placeholder="What was Apple's net income for fiscal year 2025?" autofocus>
-    <select id="scope"><option value="">any filing</option></select>
-    <button id="go" type="submit">Ask</button>
-  </form>
+  <div class="card">
+    <div class="chips" id="chips"></div>
+    <form id="f">
+      <input id="q" type="text" placeholder="What was NVIDIA's net income for fiscal year 2026?" autofocus>
+      <select id="scope"><option value="">any filing</option></select>
+      <button class="go" id="go" type="submit">Ask</button>
+    </form>
+  </div>
 
-  <div id="answer" hidden></div>
-  <div id="meta" hidden></div>
-  <div id="hits"></div>
+  <div id="out" hidden>
+    <div class="label">Answer</div>
+    <div id="answer"></div>
+    <div id="meta" hidden></div>
+    <div class="label" id="srcLabel" hidden>Sources — retrieved &amp; reranked</div>
+    <div id="hits"></div>
+  </div>
+</div>
 
 <script>
 const $ = s => document.querySelector(s);
 const scope = $("#scope");
 
+const EXAMPLES = [
+  ["What was NVIDIA's net income for fiscal year 2026?", "NVIDIA CORP", 2026],
+  ["How did Apple's total net sales change from fiscal 2023 to fiscal 2025?", "Apple Inc.", 2025],
+  ["What were Walmart's total revenues for fiscal year 2026?", "Walmart Inc.", 2026],
+  ["How many iPhone units did Apple sell in fiscal 2025?", "Apple Inc.", 2025],
+];
+
+let filings = [];
 fetch("/filings").then(r => r.json()).then(list => {
+  filings = list;
   for (const f of list) {
     const o = document.createElement("option");
     o.value = JSON.stringify(f);
@@ -62,15 +144,37 @@ fetch("/filings").then(r => r.json()).then(list => {
   }
 });
 
+const chips = $("#chips");
+for (const [text, company, fy] of EXAMPLES) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = text;
+  b.onclick = () => {
+    $("#q").value = text;
+    const match = [...scope.options].find(o => o.value && JSON.parse(o.value).company === company
+                                            && JSON.parse(o.value).fiscal_year === fy);
+    scope.value = match ? match.value : "";
+    $("#q").focus();
+  };
+  chips.appendChild(b);
+}
+
+function scoreColor(rel) {           // rel in 0..1
+  return rel > 0.66 ? "var(--good)" : rel > 0.33 ? "var(--mid)" : "var(--low)";
+}
+
 $("#f").addEventListener("submit", async e => {
   e.preventDefault();
   const question = $("#q").value.trim();
   if (!question) return;
   const sel = scope.value ? JSON.parse(scope.value) : {};
+
   $("#go").disabled = true;
-  $("#answer").hidden = false;
+  $("#out").hidden = false;
   $("#meta").hidden = true;
+  $("#srcLabel").hidden = true;
   $("#hits").innerHTML = "";
+  $("#answer").className = "loading";
+  $("#answer").textContent = "working…";
 
   const t0 = performance.now();
   const tick = setInterval(() => {
@@ -85,36 +189,55 @@ $("#f").addEventListener("submit", async e => {
     });
     const d = await res.json();
     clearInterval(tick);
+
     if (d.error) {
+      $("#answer").className = "err";
       $("#answer").textContent = d.error;
       return;
     }
+
+    $("#answer").className = "";
     $("#answer").textContent = d.answer;
     $("#meta").hidden = false;
-    $("#meta").textContent =
-      `${d.tokens} tokens · ${d.latency_ms} ms${d.cached ? " · cached" : ""} · ${d.hits.length} chunks retrieved`;
-    for (const [i, h] of d.hits.entries()) {
+    $("#meta").innerHTML =
+      `<span class="badge">${d.tokens} tokens</span>` +
+      `<span class="badge">${d.latency_ms} ms</span>` +
+      (d.cached ? `<span class="badge cached">cached</span>` : ``) +
+      `<span>${d.hits.length} chunks</span>`;
+
+    const scores = d.hits.map(h => h.score);
+    const lo = Math.min(...scores), hi = Math.max(...scores);
+    const norm = s => hi === lo ? 1 : (s - lo) / (hi - lo);
+
+    $("#srcLabel").hidden = false;
+    d.hits.forEach((h, i) => {
+      const rel = norm(h.score);
+      const col = scoreColor(rel);
       const div = document.createElement("div");
       div.className = "hit";
+      div.style.setProperty("--score-c", col);
       div.innerHTML = `
-        <div class="hit-head">
-          <span class="score">${h.score}</span>
-          <span class="tag">${h.company ?? "?"} FY${h.fiscal_year ?? "?"}</span>
-          <span class="tag">${h.section ?? "—"}</span>
-          <span class="tag">${h.kind ?? ""}</span>
-          <button type="button">expand</button>
+        <div class="hit-top">
+          <span class="rank">#${i + 1}</span>
+          <span class="relbar"><i style="width:${Math.round(rel * 100)}%"></i></span>
+          <span class="rank">${h.score.toFixed(2)}</span>
+          <span class="tag">${h.company ?? "?"} · FY${h.fiscal_year ?? "?"}</span>
+          <span class="tag">${h.section ?? "—"}${h.kind ? " · " + h.kind : ""}</span>
+          <button class="toggle" type="button">show full</button>
         </div>
         <pre></pre>`;
       div.querySelector("pre").textContent = h.text;
-      div.querySelector("button").addEventListener("click", ev => {
+      const btn = div.querySelector(".toggle");
+      btn.onclick = () => {
         div.classList.toggle("open");
-        ev.target.textContent = div.classList.contains("open") ? "collapse" : "expand";
-      });
+        btn.textContent = div.classList.contains("open") ? "show less" : "show full";
+      };
       $("#hits").appendChild(div);
-    }
+    });
   } catch (err) {
     clearInterval(tick);
-    $("#answer").textContent = "error: " + err;
+    $("#answer").className = "err";
+    $("#answer").textContent = "request failed: " + err;
   } finally {
     $("#go").disabled = false;
   }
