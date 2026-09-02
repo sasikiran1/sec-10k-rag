@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from sec10k.goldens import REFUSAL
 from sec10k.llm import ChatResult, chat
+from sec10k.rerank import rerank as rerank_hits
 from sec10k.search import Hit, hybrid_search, search
 
 SYSTEM_PROMPT = (
@@ -56,6 +57,8 @@ def answer(
     company: str | None = None,
     fiscal_year: int | None = None,
     hybrid: bool = False,
+    rerank: bool = False,
+    rerank_pool: int = 25,
 ) -> AnswerResult:
     """Retrieve k chunks for `question`, generate a grounded answer, return both.
 
@@ -74,7 +77,11 @@ def answer(
                              hits=hits, chat=result)
     """
     retrieve = hybrid_search if hybrid else search
-    hits = retrieve(question, k=k, company=company, fiscal_year=fiscal_year)
+    if rerank:
+        pool = retrieve(question, k=rerank_pool, company=company, fiscal_year=fiscal_year)
+        hits = rerank_hits(question, pool, top_k=k)
+    else:
+        hits = retrieve(question, k=k, company=company, fiscal_year=fiscal_year)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {

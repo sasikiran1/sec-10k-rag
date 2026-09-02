@@ -41,6 +41,7 @@ class EvalRun(BaseModel):
     k: int
     scoped: bool
     hybrid: bool = False
+    rerank: bool = False
     n: int
     timestamp: str
     accuracy: float
@@ -73,7 +74,8 @@ def score_retrieval(hits: list[Hit], golden: Golden) -> tuple[list[int], float, 
 
 
 def aggregate(
-    label: str, k: int, scoped: bool, items: list[ItemResult], *, hybrid: bool = False
+    label: str, k: int, scoped: bool, items: list[ItemResult], *,
+    hybrid: bool = False, rerank: bool = False,
 ) -> EvalRun:
     """Roll ItemResults into an EvalRun.
 
@@ -96,7 +98,7 @@ def aggregate(
     mrr = sum(i.reciprocal_rank for i in scored) / len(scored) if scored else 0.0
 
     return EvalRun(
-        label=label, k=k, scoped=scoped, hybrid=hybrid, n=n,
+        label=label, k=k, scoped=scoped, hybrid=hybrid, rerank=rerank, n=n,
         timestamp=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         accuracy=accuracy, accuracy_by_kind=by_kind,
         recall_at_k=recall_at_k, mrr=mrr,
@@ -107,13 +109,15 @@ def aggregate(
 
 # --- orchestration (already wired) ----------------------------------------
 
-def evaluate_item(golden: Golden, *, k: int, scoped: bool, hybrid: bool = False) -> ItemResult:
+def evaluate_item(
+    golden: Golden, *, k: int, scoped: bool, hybrid: bool = False, rerank: bool = False
+) -> ItemResult:
     company = golden.company if scoped else None
     fiscal_year = golden.fiscal_year if scoped else None
 
     res = answer(
         golden.question, k=k, tag=f"eval:{golden.id}:answer",
-        company=company, fiscal_year=fiscal_year, hybrid=hybrid,
+        company=company, fiscal_year=fiscal_year, hybrid=hybrid, rerank=rerank,
     )
     verdict, judge_chat = judge(
         golden.question, golden.answer, res.answer, tag=f"eval:{golden.id}:judge"
@@ -143,6 +147,7 @@ def run_eval(
     k: int = 6,
     scoped: bool = False,
     hybrid: bool = False,
+    rerank: bool = False,
     sleep_between: float = 1.0,
 ) -> EvalRun:
     """Evaluate every golden. `sleep_between` paces the loop to stay under the
@@ -150,9 +155,9 @@ def run_eval(
     goldens = load_goldens()
     items: list[ItemResult] = []
     for n, g in enumerate(goldens):
-        item = evaluate_item(g, k=k, scoped=scoped, hybrid=hybrid)
+        item = evaluate_item(g, k=k, scoped=scoped, hybrid=hybrid, rerank=rerank)
         items.append(item)
         # No need to pace when the calls were served from cache.
         if sleep_between and not item.cached and n < len(goldens) - 1:
             time.sleep(sleep_between)
-    return aggregate(label, k, scoped, items, hybrid=hybrid)
+    return aggregate(label, k, scoped, items, hybrid=hybrid, rerank=rerank)
