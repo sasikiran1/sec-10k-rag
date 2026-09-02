@@ -185,3 +185,249 @@
   kind: refusal
   must_contain: []
   note: The filing covers fiscal 2026; fiscal 2027 has not been reported.
+
+# --- batch 2: 5 more filings (JPM bank, WMT retail, XOM energy, KO staples, NVDA FY2025) ---
+
+- id: jpm-fy25-net-revenue
+  question: What was JPMorgan Chase's total net revenue for fiscal year 2025?
+  answer: "$185,581 million (about $185.6 billion)"
+  company: JPMORGAN CHASE & CO
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Total net revenue", "185,581"]
+
+- id: jpm-fy25-net-income
+  question: What was JPMorgan Chase's net income for fiscal year 2025?
+  answer: "$57,048 million"
+  company: JPMORGAN CHASE & CO
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Net income", "57,048"]
+
+- id: jpm-fy25-credit-provision
+  question: What was JPMorgan Chase's provision for credit losses in fiscal year 2025?
+  answer: "$14,212 million"
+  company: JPMORGAN CHASE & CO
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Provision for credit losses", "14,212"]
+
+- id: wmt-fy26-total-revenue
+  question: What were Walmart's total revenues for fiscal year 2026?
+  answer: "$713,163 million (about $713.2 billion)"
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Total revenues", "713,163"]
+
+- id: wmt-fy26-net-sales
+  question: What were Walmart's net sales for fiscal year 2026?
+  answer: "$706,413 million"
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Net sales", "706,413"]
+
+- id: wmt-fy26-net-income-attributable
+  question: What was consolidated net income attributable to Walmart for fiscal year 2026?
+  answer: "$21,893 million"
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["net income attributable to Walmart", "21,893"]
+
+- id: wmt-fy26-operating-income
+  question: What was Walmart's operating income for fiscal year 2026?
+  answer: "$29,825 million"
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Operating income", "29,825"]
+
+- id: wmt-fy26-diluted-eps
+  question: What was Walmart's diluted earnings per share attributable to Walmart for fiscal year 2026?
+  answer: "$2.73"
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: single
+  must_contain: ["Diluted", "2.73"]
+
+- id: xom-fy25-total-revenue
+  question: What was ExxonMobil's total revenues and other income for fiscal year 2025?
+  answer: "$332,238 million"
+  company: EXXON MOBIL CORP
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Total revenues and other income", "332,238"]
+
+- id: xom-fy25-operating-revenue
+  question: What was ExxonMobil's sales and other operating revenue for fiscal year 2025?
+  answer: "$323,905 million"
+  company: EXXON MOBIL CORP
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Sales and other operating revenue", "323,905"]
+
+- id: xom-fy25-crude-purchases
+  question: How much did ExxonMobil spend on crude oil and product purchases in fiscal year 2025?
+  answer: "$184,248 million"
+  company: EXXON MOBIL CORP
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Crude oil and product purchases", "184,248"]
+
+- id: ko-fy25-net-revenue
+  question: What were Coca-Cola's net operating revenues for fiscal year 2025?
+  answer: "$47,941 million"
+  company: COCA COLA CO
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Net Operating Revenues", "47,941"]
+
+- id: ko-fy25-net-income
+  question: What was Coca-Cola's consolidated net income for fiscal year 2025?
+  answer: "$13,137 million"
+  company: COCA COLA CO
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Consolidated Net Income", "13,137"]
+
+- id: ko-fy25-operating-income
+  question: What was Coca-Cola's operating income for fiscal year 2025?
+  answer: "$13,762 million"
+  company: COCA COLA CO
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Operating Income", "13,762"]
+
+- id: ko-fy25-gross-profit
+  question: What was Coca-Cola's gross profit for fiscal year 2025?
+  answer: "$29,544 million"
+  company: COCA COLA CO
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Gross Profit", "29,544"]
+
+- id: nvda-fy25-revenue
+  question: What was NVIDIA's total revenue for fiscal year 2025?
+  answer: "$130,497 million (about $130.5 billion)"
+  company: NVIDIA CORP
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Revenue", "130,497"]
+
+- id: nvda-fy25-net-income
+  question: What was NVIDIA's net income for fiscal year 2025?
+  answer: "$72,880 million"
+  company: NVIDIA CORP
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Net income", "72,880"]
+
+- id: nvda-fy25-gross-margin
+  question: What was NVIDIA's gross margin percentage in fiscal year 2025?
+  answer: "75.0%"
+  company: NVIDIA CORP
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Gross margin", "75.0"]
+
+- id: nvda-fy24-revenue-from-fy25-filing
+  question: What was NVIDIA's total revenue for fiscal year 2024?
+  answer: "$60,922 million"
+  company: NVIDIA CORP
+  fiscal_year: 2025
+  kind: single
+  must_contain: ["Revenue", "60,922"]
+
+- id: jpm-net-income-fy24-to-fy25
+  question: How did JPMorgan Chase's net income change from fiscal 2024 to fiscal 2025?
+  answer: "Edged down from $58,471 million to $57,048 million."
+  company: JPMORGAN CHASE & CO
+  fiscal_year: 2025
+  kind: comparison
+  must_contain: ["Net income", "57,048", "58,471"]
+
+- id: wmt-revenue-fy24-to-fy26
+  question: How did Walmart's total revenues change from fiscal 2024 to fiscal 2026?
+  answer: "Rose from $648,125 million to $713,163 million, an increase of about $65 billion."
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: comparison
+  must_contain: ["Total revenues", "713,163", "648,125"]
+
+- id: ko-net-income-fy24-to-fy25
+  question: How did Coca-Cola's consolidated net income change from fiscal 2024 to fiscal 2025?
+  answer: "Rose from $10,649 million to $13,137 million."
+  company: COCA COLA CO
+  fiscal_year: 2025
+  kind: comparison
+  must_contain: ["Consolidated Net Income", "13,137", "10,649"]
+
+- id: xom-revenue-fy24-to-fy25
+  question: How did ExxonMobil's total revenues and other income change from fiscal 2024 to fiscal 2025?
+  answer: "Fell from $349,585 million to $332,238 million."
+  company: EXXON MOBIL CORP
+  fiscal_year: 2025
+  kind: comparison
+  must_contain: ["Total revenues and other income", "332,238", "349,585"]
+
+- id: ko-fy25-gross-margin-pct
+  question: Approximately what was Coca-Cola's gross margin as a percentage of net operating revenues in fiscal 2025?
+  answer: "About 62% ($29,544 million gross profit on $47,941 million net operating revenues)."
+  company: COCA COLA CO
+  fiscal_year: 2025
+  kind: multi_hop
+  must_contain: ["Gross Profit", "29,544", "47,941"]
+
+- id: wmt-fy26-us-share
+  question: Approximately what share of Walmart's total revenues in fiscal 2026 came from U.S. operations?
+  answer: "About 81% ($581,175 million of $713,163 million)."
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: multi_hop
+  must_contain: ["U.S. operations", "581,175", "713,163"]
+
+- id: jpm-fy25-overhead-ratio
+  question: Approximately what was JPMorgan's overhead ratio (total noninterest expense divided by total net revenue) in fiscal 2025?
+  answer: "About 52% ($95,640 million of noninterest expense on $185,581 million of net revenue)."
+  company: JPMORGAN CHASE & CO
+  fiscal_year: 2025
+  kind: multi_hop
+  must_contain: ["Total net revenue", "185,581", "95,640"]
+
+- id: jpm-fy25-ceo-comp
+  question: What was the total compensation of JPMorgan Chase's CEO for fiscal year 2025?
+  answer: NOT_IN_FILING
+  company: JPMORGAN CHASE & CO
+  fiscal_year: 2025
+  kind: refusal
+  must_contain: []
+  note: Executive compensation is in the proxy statement, not the 10-K.
+
+- id: wmt-fy27-revenue-forecast
+  question: What is Walmart's forecast for total revenue in fiscal year 2027?
+  answer: NOT_IN_FILING
+  company: Walmart Inc.
+  fiscal_year: 2026
+  kind: refusal
+  must_contain: []
+  note: 10-Ks do not contain point revenue forecasts.
+
+- id: ko-fy26-net-income
+  question: What was Coca-Cola's consolidated net income for fiscal year 2026?
+  answer: NOT_IN_FILING
+  company: COCA COLA CO
+  fiscal_year: 2025
+  kind: refusal
+  must_contain: []
+  note: This filing covers fiscal 2025.
+
+- id: xom-crude-price-forecast
+  question: What does ExxonMobil forecast the price of Brent crude oil will be in 2026?
+  answer: NOT_IN_FILING
+  company: EXXON MOBIL CORP
+  fiscal_year: 2025
+  kind: refusal
+  must_contain: []
+  note: The filing discusses price sensitivity, not a price forecast.

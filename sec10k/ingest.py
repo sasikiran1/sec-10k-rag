@@ -30,14 +30,20 @@ class IngestResult(BaseModel):
 
 
 def ingest_ticker(
-    ticker: str, *, before: str | None = None, replace: bool = True
+    ticker: str,
+    *,
+    before: str | None = None,
+    replace: bool = True,
+    cik: int | None = None,
 ) -> IngestResult:
     """Ingest the most recent 10-K for `ticker` into the chunks table.
 
     `before` (ISO date) picks an older filing; `replace` re-ingests one already
     stored (otherwise an existing accession is left alone and skipped=True).
+    `cik` overrides the ticker lookup — needed when SEC's ticker file points at a
+    newly-formed holding company that hasn't filed yet.
     """
-    ref = latest_10k(cik_for_ticker(ticker), ticker=ticker, before=before)
+    ref = latest_10k(cik or cik_for_ticker(ticker), ticker=ticker, before=before)
     fiscal_year = int(ref.report_date[:4])
 
     with get_connection() as conn:
