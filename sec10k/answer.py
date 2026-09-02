@@ -57,7 +57,7 @@ def answer(
     company: str | None = None,
     fiscal_year: int | None = None,
     hybrid: bool = False,
-    rerank: bool = False,
+    rerank: bool = True,
     rerank_pool: int = 25,
 ) -> AnswerResult:
     """Retrieve k chunks for `question`, generate a grounded answer, return both.
