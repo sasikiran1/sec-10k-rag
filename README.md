@@ -71,6 +71,15 @@ python scripts/build_corpus.py
 
 Postgres listens on `localhost:5433` (db/user/pass all `sec10k`).
 
+## Demo UI
+
+```
+uvicorn sec10k.app:app --reload    # http://localhost:8000
+```
+
+Ask a question; the page shows the answer and every chunk it was generated from,
+with the reranker's relevance score, the filing, and the Item section.
+
 ## Tests
 
 ```

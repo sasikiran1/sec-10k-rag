@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sec-10k-rag</title>
+<style>
+  :root { color-scheme: light dark; --line: #8883; }
+  * { box-sizing: border-box; }
+  body { max-width: 780px; margin: 2rem auto; padding: 0 1rem;
+         font: 15px/1.55 system-ui, sans-serif; }
+  h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
+  p.sub { margin: 0 0 1.5rem; opacity: .65; }
+  form { display: flex; flex-wrap: wrap; gap: .5rem; }
+  input[type=text] { flex: 1 1 100%; padding: .6rem .7rem; font: inherit;
+                     border: 1px solid var(--line); border-radius: 8px; background: transparent; }
+  select, button { padding: .55rem .7rem; font: inherit; border: 1px solid var(--line);
+                   border-radius: 8px; background: transparent; }
+  button { cursor: pointer; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  #answer { margin: 1.5rem 0 .5rem; padding: 1rem; border: 1px solid var(--line);
+            border-radius: 10px; white-space: pre-wrap; font-size: 1.05rem; }
+  #meta { opacity: .6; font-size: .85rem; margin-bottom: 1.5rem; }
+  .hit { border: 1px solid var(--line); border-radius: 10px; padding: .7rem .8rem;
+         margin-bottom: .6rem; }
+  .hit-head { display: flex; gap: .5rem; align-items: center; font-size: .8rem;
+              opacity: .8; margin-bottom: .4rem; flex-wrap: wrap; }
+  .tag { border: 1px solid var(--line); border-radius: 6px; padding: .05rem .4rem; }
+  .score { font-variant-numeric: tabular-nums; font-weight: 700; opacity: 1; }
+  .hit pre { margin: 0; white-space: pre-wrap; font: 12.5px/1.5 ui-monospace, monospace;
+             max-height: 8.5rem; overflow: auto; }
+  .hit.open pre { max-height: none; }
+  .hit-head button { border: none; background: transparent; padding: 0; margin-left: auto;
+                     opacity: .7; cursor: pointer; font: inherit; }
+</style>
+</head>
+<body>
+  <h1>sec-10k-rag</h1>
+  <p class="sub">Ask about a SEC 10-K. The answer is generated only from the chunks shown below it.</p>
+
+  <form id="f">
+    <input type="text" id="q" placeholder="What was Apple's net income for fiscal year 2025?" autofocus>
+    <select id="scope"><option value="">any filing</option></select>
+    <button id="go" type="submit">Ask</button>
+  </form>
+
+  <div id="answer" hidden></div>
+  <div id="meta" hidden></div>
+  <div id="hits"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const scope = $("#scope");
+
+fetch("/filings").then(r => r.json()).then(list => {
+  for (const f of list) {
+    const o = document.createElement("option");
+    o.value = JSON.stringify(f);
+    o.textContent = `${f.company} — FY${f.fiscal_year}`;
+    scope.appendChild(o);
+  }
+});
+
+$("#f").addEventListener("submit", async e => {
+  e.preventDefault();
+  const question = $("#q").value.trim();
+  if (!question) return;
+  const sel = scope.value ? JSON.parse(scope.value) : {};
+  $("#go").disabled = true;
+  $("#answer").hidden = false;
+  $("#answer").textContent = "…";
+  $("#meta").hidden = true;
+  $("#hits").innerHTML = "";
+
+  try {
+    const res = await fetch("/ask", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question, ...sel }),
+    });
+    const d = await res.json();
+    $("#answer").textContent = d.answer;
+    $("#meta").hidden = false;
+    $("#meta").textContent =
+      `${d.tokens} tokens · ${d.latency_ms} ms${d.cached ? " · cached" : ""} · ${d.hits.length} chunks retrieved`;
+    for (const [i, h] of d.hits.entries()) {
+      const div = document.createElement("div");
+      div.className = "hit";
+      div.innerHTML = `
+        <div class="hit-head">
+          <span class="score">${h.score}</span>
+          <span class="tag">${h.company ?? "?"} FY${h.fiscal_year ?? "?"}</span>
+          <span class="tag">${h.section ?? "—"}</span>
+          <span class="tag">${h.kind ?? ""}</span>
+          <button type="button">expand</button>
+        </div>
+        <pre></pre>`;
+      div.querySelector("pre").textContent = h.text;
+      div.querySelector("button").addEventListener("click", ev => {
+        div.classList.toggle("open");
+        ev.target.textContent = div.classList.contains("open") ? "collapse" : "expand";
+      });
+      $("#hits").appendChild(div);
+    }
+  } catch (err) {
+    $("#answer").textContent = "error: " + err;
+  } finally {
+    $("#go").disabled = false;
+  }
+});
+</script>
+</body>
+</html>
