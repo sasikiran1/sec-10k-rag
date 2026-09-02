@@ -1,0 +1,601 @@
+{
+  "label": "reranker pool 25->60 + enriched headers (scoped, k=6)",
+  "k": 6,
+  "scoped": true,
+  "hybrid": false,
+  "rerank": true,
+  "n": 22,
+  "timestamp": "2026-09-02T17:04:49+00:00",
+  "accuracy": 0.9545454545454546,
+  "accuracy_by_kind": {
+    "multi_hop": 1.0,
+    "refusal": 1.0,
+    "comparison": 1.0,
+    "single": 0.9333333333333333
+  },
+  "recall_at_k": 0.9473684210526315,
+  "mrr": 0.5956140350877193,
+  "total_tokens": 53045,
+  "items": [
+    {
+      "id": "aapl-fy23-net-sales",
+      "kind": "single",
+      "question": "What were Apple's total net sales for fiscal year 2023?",
+      "gold": "$383,285 million (about $383.3 billion)",
+      "predicted": "$383,285 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer provides the exact same total net sales figure ($383,285 million) as the reference.",
+      "retrieved": [
+        1683,
+        1629,
+        1618,
+        1601,
+        1603,
+        1608
+      ],
+      "relevant_ranks": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "answer_tokens": 2476,
+      "judge_tokens": 474,
+      "cached": true
+    },
+    {
+      "id": "aapl-fy23-rd-expense",
+      "kind": "single",
+      "question": "How much did Apple spend on research and development in fiscal year 2023?",
+      "gold": "$29,915 million (about $29.9 billion)",
+      "predicted": "$29,915 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer provides the exact same R&D spending figure ($29,915 million) as the reference.",
+      "retrieved": [
+        1608,
+        1681,
+        1618,
+        1677,
+        1644,
+        1609
+      ],
+      "relevant_ranks": [
+        1,
+        2,
+        3
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "answer_tokens": 1805,
+      "judge_tokens": 477,
+      "cached": false
+    },
+    {
+      "id": "aapl-fy23-greater-china",
+      "kind": "single",
+      "question": "What were Apple's net sales in Greater China for fiscal year 2023?",
+      "gold": "$72,559 million",
+      "predicted": "$72,559 million.",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer provides the exact net sales figure of $72,559 million matching the reference.",
+      "retrieved": [
+        1602,
+        1683,
+        1601,
+        1679,
+        1682,
+        1629
+      ],
+      "relevant_ranks": [
+        3,
+        4
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "answer_tokens": 2190,
+      "judge_tokens": 449,
+      "cached": true
+    },
+    {
+      "id": "aapl-fy23-iphone-net-sales",
+      "kind": "single",
+      "question": "What were Apple's iPhone net sales in fiscal year 2023?",
+      "gold": "$200,583 million",
+      "predicted": "$200,583 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer provides the exact same net sales figure ($200,583 million) as the reference.",
+      "retrieved": [
+        1604,
+        1603,
+        1628,
+        1683,
+        1629,
+        1682
+      ],
+      "relevant_ranks": [
+        2,
+        3
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "answer_tokens": 1893,
+      "judge_tokens": 452,
+      "cached": true
+    },
+    {
+      "id": "aapl-fy23-buyback",
+      "kind": "single",
+      "question": "How much common stock did Apple repurchase during fiscal year 2023?",
+      "gold": "471 million shares for $76.6 billion (excluding excise tax)",
+      "predicted": "471 million shares.",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer correctly states the 471 million shares repurchased, matching the key figure in the reference.",
+      "retrieved": [
+        1670,
+        1597,
+        1671,
+        1624,
+        1595,
+        1631
+      ],
+      "relevant_ranks": [
+        1
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "answer_tokens": 2138,
+      "judge_tokens": 648,
+      "cached": false
+    },
+    {
+      "id": "aapl-fy25-net-income",
+      "kind": "single",
+      "question": "What was Apple's net income for fiscal year 2025?",
+      "gold": "$112,010 million (about $112.0 billion)",
+      "predicted": "$112,010 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer provides the exact net income figure of $112,010 million matching the reference.",
+      "retrieved": [
+        1503,
+        1477,
+        1497,
+        1488,
+        1500,
+        1504
+      ],
+      "relevant_ranks": [
+        2
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "answer_tokens": 1812,
+      "judge_tokens": 472,
+      "cached": false
+    },
+    {
+      "id": "aapl-fy25-rd-expense",
+      "kind": "single",
+      "question": "What was Apple's research and development expense in fiscal year 2025?",
+      "gold": "$34,550 million",
+      "predicted": "$34,550 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted R&D expense matches the reference amount of $34,550 million.",
+      "retrieved": [
+        1468,
+        1467,
+        1497,
+        1524,
+        1472,
+        1503
+      ],
+      "relevant_ranks": [
+        2
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "answer_tokens": 1310,
+      "judge_tokens": 444,
+      "cached": false
+    },
+    {
+      "id": "aapl-fy25-buyback",
+      "kind": "single",
+      "question": "How much did Apple spend repurchasing common stock in fiscal year 2025?",
+      "gold": "$89.3 billion (402 million shares)",
+      "predicted": "$89.3 billion",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer correctly states the repurchase amount of $89.3 billion, matching the reference figure.",
+      "retrieved": [
+        1456,
+        1519,
+        1520,
+        1483,
+        1454,
+        1455
+      ],
+      "relevant_ranks": [
+        2
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "answer_tokens": 2122,
+      "judge_tokens": 506,
+      "cached": true
+    },
+    {
+      "id": "aapl-net-sales-fy23-to-fy25",
+      "kind": "comparison",
+      "question": "How did Apple's total net sales change from fiscal 2023 to fiscal 2025?",
+      "gold": "Rose from $383,285 million in FY2023 to $416,161 million in FY2025, an increase of about $32.9 billion.",
+      "predicted": "Increased by $32,876 million (≈ $32.9 billion) from FY 2023 ($383,285 million) to FY 2025 ($416,161 million).",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The prediction matches the reference figures exactly, giving the same FY2023 and FY2025 net sales and the correct increase of roughly $32.9 billion.",
+      "retrieved": [
+        1488,
+        1467,
+        1463,
+        1461,
+        1460,
+        1477
+      ],
+      "relevant_ranks": [
+        5,
+        6
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.2,
+      "answer_tokens": 2468,
+      "judge_tokens": 673,
+      "cached": false
+    },
+    {
+      "id": "aapl-fy25-services-share",
+      "kind": "multi_hop",
+      "question": "Approximately what share of Apple's total net sales in fiscal 2025 came from Services?",
+      "gold": "About 26% ($109,158 million of $416,161 million).",
+      "predicted": "≈ 26 % of total net sales.",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The prediction correctly gives the approximate share of Services as 26%, matching the reference percentage.",
+      "retrieved": [
+        1488,
+        1477,
+        1487,
+        1463,
+        1532,
+        1461
+      ],
+      "relevant_ranks": [
+        2,
+        3
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "answer_tokens": 2157,
+      "judge_tokens": 517,
+      "cached": false
+    },
+    {
+      "id": "msft-fy26-total-revenue",
+      "kind": "single",
+      "question": "What was Microsoft's total revenue in fiscal year 2026?",
+      "gold": "$331,839 million (about $331.8 billion)",
+      "predicted": "$331,839 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer gives the exact same total revenue figure ($331,839 million) as the reference.",
+      "retrieved": [
+        1958,
+        1894,
+        1906,
+        1835,
+        1924,
+        1797
+      ],
+      "relevant_ranks": [
+        4
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.25,
+      "answer_tokens": 1725,
+      "judge_tokens": 473,
+      "cached": false
+    },
+    {
+      "id": "msft-fy26-net-income",
+      "kind": "single",
+      "question": "What was Microsoft's net income in fiscal year 2026?",
+      "gold": "$133,749 million",
+      "predicted": "$133,749 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted net income of $133,749 million exactly matches the reference figure.",
+      "retrieved": [
+        1894,
+        1837,
+        1799,
+        1797,
+        1910,
+        1862
+      ],
+      "relevant_ranks": [
+        2,
+        4
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "answer_tokens": 1530,
+      "judge_tokens": 444,
+      "cached": false
+    },
+    {
+      "id": "msft-fy26-intelligent-cloud",
+      "kind": "single",
+      "question": "What was the revenue of Microsoft's Intelligent Cloud segment in fiscal year 2026?",
+      "gold": "$137,791 million",
+      "predicted": "$137,791 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted revenue $137,791 million exactly matches the reference figure.",
+      "retrieved": [
+        1958,
+        1801,
+        1800,
+        1953,
+        1798,
+        1922
+      ],
+      "relevant_ranks": [
+        3,
+        4
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "answer_tokens": 2578,
+      "judge_tokens": 445,
+      "cached": true
+    },
+    {
+      "id": "msft-revenue-fy25-to-fy26",
+      "kind": "comparison",
+      "question": "By how much did Microsoft's total revenue grow from fiscal 2025 to fiscal 2026?",
+      "gold": "From $281,724 million to $331,839 million, an increase of about $50.1 billion (18%).",
+      "predicted": "$50,115 million (≈ $50.1 billion) increase.",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted increase of $50,115 million aligns with the reference's about $50.1 billion growth, correctly answering the revenue growth amount.",
+      "retrieved": [
+        1801,
+        1894,
+        1797,
+        1808,
+        1835,
+        1954
+      ],
+      "relevant_ranks": [
+        5
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.2,
+      "answer_tokens": 2032,
+      "judge_tokens": 648,
+      "cached": false
+    },
+    {
+      "id": "nvda-fy26-total-revenue",
+      "kind": "single",
+      "question": "What was NVIDIA's total revenue for fiscal year 2026?",
+      "gold": "$215,938 million (about $215.9 billion)",
+      "predicted": "$215,938 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer provides the exact total revenue figure ($215,938 million) matching the reference.",
+      "retrieved": [
+        2127,
+        2102,
+        2133,
+        2131,
+        2073,
+        2098
+      ],
+      "relevant_ranks": [
+        1,
+        3,
+        4
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "answer_tokens": 1538,
+      "judge_tokens": 465,
+      "cached": false
+    },
+    {
+      "id": "nvda-fy26-net-income",
+      "kind": "single",
+      "question": "What was NVIDIA's net income for fiscal year 2026?",
+      "gold": "$120,067 million",
+      "predicted": "$120,067 million",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted net income of $120,067 million exactly matches the reference figure.",
+      "retrieved": [
+        2063,
+        2037,
+        2027,
+        2129,
+        2115,
+        2061
+      ],
+      "relevant_ranks": [
+        1,
+        3,
+        6
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "answer_tokens": 1981,
+      "judge_tokens": 449,
+      "cached": false
+    },
+    {
+      "id": "nvda-fy26-gross-margin",
+      "kind": "single",
+      "question": "What was NVIDIA's gross margin percentage in fiscal year 2026?",
+      "gold": "71.1%",
+      "predicted": "71.1 %",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The predicted answer provides the same gross margin percentage (71.1%) as the reference.",
+      "retrieved": [
+        2027,
+        2077,
+        2029,
+        2033,
+        2031,
+        2109
+      ],
+      "relevant_ranks": [
+        1
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "answer_tokens": 1867,
+      "judge_tokens": 449,
+      "cached": false
+    },
+    {
+      "id": "nvda-net-income-fy25-to-fy26",
+      "kind": "comparison",
+      "question": "How did NVIDIA's net income change from fiscal 2025 to fiscal 2026?",
+      "gold": "Increased from $72,880 million to $120,067 million, up about 65%.",
+      "predicted": "Net income increased by $47,187 million, rising 65% from fiscal 2025 to fiscal 2026.",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The prediction correctly states the net income increase of $47,187 million and the ~65% rise, matching the reference figures.",
+      "retrieved": [
+        2063,
+        2027,
+        2037,
+        2118,
+        2038,
+        2120
+      ],
+      "relevant_ranks": [
+        1,
+        2
+      ],
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "answer_tokens": 1913,
+      "judge_tokens": 587,
+      "cached": false
+    },
+    {
+      "id": "nvda-fy26-h20-charge",
+      "kind": "single",
+      "question": "What inventory-related charge weighed on NVIDIA's fiscal 2026 gross margin?",
+      "gold": "A $4.5 billion charge associated with H20 excess inventory and purchase obligations.",
+      "predicted": "$4.0 billion inventory provisions.",
+      "correct": false,
+      "score": 0.0,
+      "judge_reasoning": "The predicted amount ($4.0 billion) does not match the reference amount ($4.5 billion).",
+      "retrieved": [
+        2098,
+        2128,
+        2027,
+        2101,
+        2092,
+        2083
+      ],
+      "relevant_ranks": [],
+      "recall_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "answer_tokens": 1537,
+      "judge_tokens": 566,
+      "cached": false
+    },
+    {
+      "id": "aapl-fy25-iphone-units",
+      "kind": "refusal",
+      "question": "How many iPhone units did Apple sell in fiscal year 2025?",
+      "gold": "NOT_IN_FILING",
+      "predicted": "NOT_IN_FILING",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "Both the reference and predicted answers state that the information is not in the filing, so they match.",
+      "retrieved": [
+        1487,
+        1490,
+        1462,
+        1532,
+        1463,
+        1488
+      ],
+      "relevant_ranks": [],
+      "recall_at_k": null,
+      "reciprocal_rank": null,
+      "answer_tokens": 1714,
+      "judge_tokens": 441,
+      "cached": false
+    },
+    {
+      "id": "msft-fy26-ceo-comp",
+      "kind": "refusal",
+      "question": "What was the total compensation of Microsoft's CEO for fiscal year 2026?",
+      "gold": "NOT_IN_FILING",
+      "predicted": "NOT_IN_FILING",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "The prediction correctly states that the information is not in the filing, matching the reference answer.",
+      "retrieved": [
+        1948,
+        1943,
+        1906,
+        1818,
+        1959,
+        1955
+      ],
+      "relevant_ranks": [],
+      "recall_at_k": null,
+      "reciprocal_rank": null,
+      "answer_tokens": 1267,
+      "judge_tokens": 440,
+      "cached": false
+    },
+    {
+      "id": "nvda-fy27-revenue",
+      "kind": "refusal",
+      "question": "What was NVIDIA's total revenue for fiscal year 2027?",
+      "gold": "NOT_IN_FILING",
+      "predicted": "NOT_IN_FILING",
+      "correct": true,
+      "score": 1.0,
+      "judge_reasoning": "Both reference and prediction state the information is not in the filing, so the prediction matches.",
+      "retrieved": [
+        2127,
+        2131,
+        2133,
+        2027,
+        2093,
+        2061
+      ],
+      "relevant_ranks": [],
+      "recall_at_k": null,
+      "reciprocal_rank": null,
+      "answer_tokens": 2035,
+      "judge_tokens": 438,
+      "cached": false
+    }
+  ]
+}

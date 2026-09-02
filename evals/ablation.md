@@ -13,7 +13,12 @@ human-validated (see `judge_calibration.yaml`). Treat accuracy as indicative.
 | 1 | + metadata filter (scope to company + fiscal year) | 54.5% | 42.1% | 0.177 | cheapest win; retrieval still misses >half the time within the right filing |
 | 2 | + hybrid (RRF of vector + Postgres FTS) — **reverted** | 36.4% | 21.1% | 0.079 | regressed 18 pts. `ts_rank_cd` has no IDF weighting, so common words dominate and RRF rewards boilerplate. Code kept (`--hybrid`), not the default. |
 | 3 | + cross-encoder reranker (ms-marco-MiniLM-L-6-v2, top-25 → 6) | 63.6% | 57.9% | 0.230 | +9 acc, +16 recall. Comparison acc fell 67→33: the CE prefers question-phrase matches over the multi-year table. 5 of 8 misses were NVIDIA. |
-| 4 | + natural-language chunk header before embedding (`"<company> — fiscal year <yr> — <section> (<kind>)."`) | **77.3%** | **73.7%** | **0.493** | +14 acc, +16 recall, MRR ~2×. Terse tables now embed/rerank against NL queries; recovered comparison (→67) and 4 of 5 NVIDIA. 5 misses left (Apple FY25 + MSFT revenue chunks, 1 NVDA figure disambiguation). |
+| 4 | + natural-language chunk header before embedding (`"<company> — fiscal year <yr> — <section> (<kind>)."`) | 77.3% | 73.7% | 0.493 | +14 acc, +16 recall, MRR ~2×. Terse tables now embed/rerank against NL queries; recovered comparison (→67) and 4 of 5 NVIDIA. 5 misses left, all main income-statement chunks below vector rank 25. |
+| 5 | + rerank pool 25 → 60 | **95.5%** | **94.7%** | **0.596** | The big multi-line income-statement chunks sit at vector rank 30–55 (their embedding is a blur of every line item); a wider pool lets the cross-encoder reach them. 1 miss left: `nvda-fy26-h20-charge` ($4.0B vs $4.5B — the filing has more than one inventory charge). |
+
+**Caveats.** n = 22 (target is 120). The judge is calibrated only against Claude-applied
+labels, not an independent human. Read "95.5%" as "strong on a small set with an
+un-validated judge", not a headline number yet.
 
 Steps 0–3 are on the pre-enrichment corpus; step 4 re-ingests with the header and
 re-runs step 3's exact config, so the 3→4 delta isolates the enrichment. A
