@@ -69,9 +69,13 @@ $("#f").addEventListener("submit", async e => {
   const sel = scope.value ? JSON.parse(scope.value) : {};
   $("#go").disabled = true;
   $("#answer").hidden = false;
-  $("#answer").textContent = "…";
   $("#meta").hidden = true;
   $("#hits").innerHTML = "";
+
+  const t0 = performance.now();
+  const tick = setInterval(() => {
+    $("#answer").textContent = `working… ${((performance.now() - t0) / 1000).toFixed(0)}s`;
+  }, 250);
 
   try {
     const res = await fetch("/ask", {
@@ -80,6 +84,11 @@ $("#f").addEventListener("submit", async e => {
       body: JSON.stringify({ question, ...sel }),
     });
     const d = await res.json();
+    clearInterval(tick);
+    if (d.error) {
+      $("#answer").textContent = d.error;
+      return;
+    }
     $("#answer").textContent = d.answer;
     $("#meta").hidden = false;
     $("#meta").textContent =
@@ -104,6 +113,7 @@ $("#f").addEventListener("submit", async e => {
       $("#hits").appendChild(div);
     }
   } catch (err) {
+    clearInterval(tick);
     $("#answer").textContent = "error: " + err;
   } finally {
     $("#go").disabled = false;

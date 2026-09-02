@@ -59,10 +59,13 @@ def answer(
     hybrid: bool = False,
     rerank: bool = True,
     rerank_pool: int = 60,
+    max_retries: int = 6,
 ) -> AnswerResult:
     """Retrieve chunks for `question` (vector, optionally hybrid, optionally
     cross-encoder reranked from a `rerank_pool`), build a grounded prompt, and
-    generate. `company` / `fiscal_year` scope retrieval to one filing."""
+    generate. `company` / `fiscal_year` scope retrieval to one filing.
+    Interactive callers should pass a small `max_retries` (e.g. 2) so a
+    rate-limited call fails in seconds instead of minutes of backoff."""
     retrieve = hybrid_search if hybrid else search
     if rerank:
         pool = retrieve(question, k=rerank_pool, company=company, fiscal_year=fiscal_year)
@@ -76,7 +79,7 @@ def answer(
             "content": f"Excerpts:\n{format_context(hits)}\n\nQuestion: {question}",
         },
     ]
-    result = chat(messages, tag=tag)
+    result = chat(messages, tag=tag, max_retries=max_retries)
     return AnswerResult(
         question=question, answer=result.text.strip(), hits=hits, chat=result
     )

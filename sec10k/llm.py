@@ -57,10 +57,13 @@ def chat(
     *,
     tag: str | None = None,
     response_format: dict | None = None,
+    max_retries: int = 6,
 ) -> ChatResult:
     """Send `messages` (list of {"role", "content"}) to the active model at
     temperature 0. Serves from the response cache when possible, retries transient
-    errors, writes one llm_calls row, and returns the answer + that record."""
+    errors (up to `max_retries` attempts), writes one llm_calls row, and returns
+    the answer + that record. Lower `max_retries` for interactive callers that
+    shouldn't sit through minutes of rate-limit backoff."""
     settings = get_settings()
     start = time.perf_counter()
 
@@ -76,7 +79,10 @@ def chat(
     data = cache.get(ckey)
     was_cached = data is not None
     if data is None:
-        resp = with_retries(lambda: _client().chat.completions.create(**create_kwargs))
+        resp = with_retries(
+            lambda: _client().chat.completions.create(**create_kwargs),
+            max_attempts=max_retries,
+        )
         data = {
             "id": resp.id,
             "model": resp.model,
@@ -115,6 +121,7 @@ def chat_structured(
     *,
     tag: str | None = None,
     max_repairs: int = 2,
+    max_retries: int = 6,
 ) -> tuple[M, ChatResult]:
     """Ask the model to fill in `schema`; return (parsed_object, raw_chat_result).
 
@@ -133,7 +140,10 @@ def chat_structured(
     last_error: Exception | None = None
 
     for _ in range(max_repairs + 1):          # first try + up to max_repairs retries
-        result = chat(convo, tag=tag, response_format={"type": "json_object"})
+        result = chat(
+            convo, tag=tag, response_format={"type": "json_object"},
+            max_retries=max_retries,
+        )
         try:
             payload = json.loads(result.text)
             return schema.model_validate(payload), result
