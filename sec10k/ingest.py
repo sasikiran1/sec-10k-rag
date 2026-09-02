@@ -54,15 +54,23 @@ def ingest_ticker(
 
     html = download_filing(ref).read_text(encoding="utf-8", errors="ignore")
     chunks = chunk_structured(html_to_blocks(html))
-    vectors = embed_texts([c.text for c in chunks])
+
+    # Natural-language header so terse tables still embed/rerank against queries
+    # like "NVIDIA total revenue fiscal year 2026".
+    def enrich(c) -> str:
+        where = c.section or "general section"
+        return f"{ref.company} — fiscal year {fiscal_year} — {where} ({c.kind}).\n{c.text}"
+
+    texts = [enrich(c) for c in chunks]
+    vectors = embed_texts(texts)
 
     params = [
         (
-            ref.accession, i, c.text, Vector(v),
+            ref.accession, i, text, Vector(v),
             ref.company, ref.cik, ref.accession, fiscal_year,
             c.section or None, c.kind,
         )
-        for i, (c, v) in enumerate(zip(chunks, vectors))
+        for i, (c, text, v) in enumerate(zip(chunks, texts, vectors))
     ]
     with get_connection() as conn:
         with conn.cursor() as cur:
