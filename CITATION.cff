@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use Filing Analyst in research, benchmarking, or teaching, please cite this repository."
+title: "Filing Analyst: Evaluation-driven RAG for SEC 10-K filings"
+type: software
+authors:
+  - family-names: "Gottipati"
+    given-names: "Sasi Kiran"
+repository-code: "https://github.com/sasikiran1/sec-10k-rag"
+url: "https://github.com/sasikiran1/sec-10k-rag"
+license: "Apache-2.0"
+abstract: "An evaluation-driven retrieval-augmented generation system for SEC 10-K filings with structure-aware chunking, pgvector retrieval, cross-encoder reranking, grounded generation, tracing, and reproducible ablation experiments."
+keywords:
+  - RAG
+  - retrieval-augmented generation
+  - information retrieval
+  - SEC 10-K
+  - financial AI
+  - pgvector
+  - reranking
+  - evaluation
+version: "0.1.0"
+date-released: "2026-09-03"
