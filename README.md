@@ -9,7 +9,8 @@ The RAG is ordinary. The point is the measurement: going from a number you can
 defend ("naive retrieval answered 45.5% of my eval set; here is exactly which
 change bought which points") instead of a vibe.
 
-![The web demo: a question, the grounded answer with a clickable citation, and the six source chunks it was built from with their reranker scores.](docs/demo.png)
+<img width="1214" height="688" alt="image" src="https://github.com/user-attachments/assets/b9a97258-3f06-402e-b702-3a463b5bbd70" />
+
 
 ---
 
