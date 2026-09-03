@@ -1,9 +1,4 @@
-"""Naive vector search over the `chunks` table.
-
-Embed text on the way in, embed the query on the way out, let pgvector find the
-nearest stored vectors by cosine distance. This is the baseline retrieval that
-every later improvement (hybrid, rerank, decomposition) has to beat.
-"""
+"""Dense, lexical, and hybrid retrieval over SEC filing chunks."""
 from __future__ import annotations
 
 from collections import defaultdict
@@ -17,13 +12,13 @@ from sec10k.embeddings import embed_text, embed_texts
 
 
 class Hit(BaseModel):
-    """One search result. Filing-metadata fields are None for ad-hoc test data."""
+    """A ranked retrieval result."""
 
     id: int
     source: str
     ord: int
     text: str
-    score: float  # cosine similarity in [-1, 1]; higher = more similar
+    score: float
     section: str | None = None
     kind: str | None = None
     company: str | None = None
@@ -32,8 +27,7 @@ class Hit(BaseModel):
 
 
 def add_chunks(rows: list[tuple[str, int, str]]) -> int:
-    """Insert (source, ord, text) rows, embedding the text here. Returns the count.
-    Filing metadata columns are left NULL — see sec10k.ingest for the real path."""
+    """Embed and insert `(source, ord, text)` rows."""
     texts = [text for (_src, _ord, text) in rows]
     vectors = embed_texts(texts)
     params = [
@@ -56,16 +50,9 @@ def search(
     company: str | None = None,
     fiscal_year: int | None = None,
 ) -> list[Hit]:
-    """Return the k chunks whose embeddings are closest to `query` by cosine.
+    """Return the `k` nearest chunks by cosine similarity.
 
-    pgvector's `<=>` is cosine DISTANCE: 0 = identical direction, 1 = orthogonal,
-    2 = opposite. Cosine SIMILARITY = 1 - distance. So we ORDER BY the distance
-    ascending (nearest first) and report `1 - distance` as the score.
-
-    `company` / `fiscal_year` restrict the search to one filing's chunks — the eval
-    scopes questions this way so an Apple question can't retrieve Microsoft text.
-
-    Rows come back as dicts (psycopg dict_row) so Hit(**row) just works.
+    Optional company and fiscal-year filters restrict retrieval to one filing.
     """
     qv = Vector(embed_text(query))
     params: dict = {"qv": qv, "k": k}
@@ -113,10 +100,9 @@ def keyword_search(
     company: str | None = None,
     fiscal_year: int | None = None,
 ) -> list[Hit]:
-    """Postgres full-text search over chunks.text (BM25-ish via ts_rank_cd)."""
+    """Run PostgreSQL full-text search ranked with `ts_rank_cd`."""
     params: dict = {"q": query, "k": k}
-    # websearch_to_tsquery ANDs every term; rewrite '&' -> '|' so a chunk matching
-    # ANY query term is a candidate, ranked by ts_rank_cd (term coverage + rarity).
+    # Expand the default AND query to OR so any query term may produce a candidate.
     sql = f"""
         SELECT {_COLS}, ts_rank_cd(text_tsv, q.tsq) AS score
         FROM chunks,
@@ -143,9 +129,11 @@ def hybrid_search(
     pool: int = 20,
     rrf_k: int = 60,
 ) -> list[Hit]:
-    """Fuse the vector and keyword rankings with Reciprocal Rank Fusion:
-    each chunk scores sum(1 / (rrf_k + rank)) across the two lists.
-    (Measured worse than vector alone — kept for the ablation. See evals/ablation.md.)"""
+    """Fuse dense and lexical rankings with Reciprocal Rank Fusion.
+
+    This configuration underperformed dense retrieval in the measured ablation and
+    is retained for reproducibility. See `evals/ablation.md`.
+    """
     v = search(query, k=pool, company=company, fiscal_year=fiscal_year)
     t = keyword_search(query, k=pool, company=company, fiscal_year=fiscal_year)
 
