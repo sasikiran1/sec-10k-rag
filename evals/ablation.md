@@ -25,4 +25,22 @@ re-runs step 3's exact config, so the 3→4 delta isolates the enrichment. A
 context-char budget was added at step 2 (prompt was overflowing Groq's 8k/min on
 large table chunks); it did not change step 1's numbers — verified by re-running.
 
+## Larger set: 9 filings, 52 questions
+
+The corpus was later expanded to 9 filings (adding JPMorgan, Walmart, ExxonMobil,
+Coca-Cola, and NVIDIA FY2025) and the golden set to 52 questions. The **best config
+from the table above** (scoped + cross-encoder rerank, pool 60, enriched headers)
+was re-run on it:
+
+| set | acc | recall@6 | MRR | by kind |
+|-----|-----|----------|-----|---------|
+| 52-question, 9 filings | **82.7%** | 77.8% | 0.496 | single 79% · comparison 71% · multi_hop 100% · refusal 100% |
+
+Down from 95.5% on the 22-set: the new filings are structurally harder (JPMorgan's
+1,250-chunk filing; ExxonMobil / Coca-Cola tables where the model retrieves the
+right chunk but picks the wrong column). The **full ablation was not re-run** on the
+52-set — on Groq's free tier a single baseline pass took >5 hours of rate-limit
+backoff. The 22-set ablation above is the measured story; the 52-set is a harder
+re-validation of its endpoint.
+
 Result files: `evals/results/*.json`.
