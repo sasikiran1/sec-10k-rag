@@ -1,7 +1,7 @@
-"""Answer a question from retrieved 10-K chunks.
+"""Generate grounded answers from retrieved SEC 10-K chunks.
 
-retrieve -> stuff the chunks into a grounded prompt -> generate. Deliberately
-plain: this is the baseline the retrieval improvements in session 6 must beat.
+The generation layer is intentionally simple so retrieval changes can be
+evaluated independently.
 """
 from __future__ import annotations
 
@@ -21,8 +21,7 @@ SYSTEM_PROMPT = (
     "Be concise: give the figure or fact asked for, with its unit. No commentary."
 )
 
-# Appended to SYSTEM_PROMPT when cite=True. Kept out of the default (measured)
-# prompt so turning citations on doesn't invalidate the ablation numbers.
+# Citation mode is opt-in so the measured evaluation prompt remains unchanged.
 CITE_CLAUSE = (
     " After the answer, cite the excerpt number(s) you used in square brackets, "
     "e.g. [2] or [1][3]. Cite only excerpts that actually contain the answer."
@@ -33,19 +32,14 @@ class AnswerResult(BaseModel):
     question: str
     answer: str
     hits: list[Hit]
-    chat: ChatResult      # carries tokens / latency / db_id for cost accounting
+    chat: ChatResult
 
 
 CONTEXT_CHAR_BUDGET = 16000  # ~4k tokens; keeps the request under Groq's 8k/min
 
 
 def format_context(hits: list[Hit], *, char_budget: int = CONTEXT_CHAR_BUDGET) -> str:
-    """Render hits as a numbered context block, best-first, within a char budget.
-
-    Adds whole chunks in rank order until the next one wouldn't fit, then stops —
-    so tables stay intact and the prompt stays bounded. Always includes at least
-    the top hit.
-    """
+    """Render ranked hits as a bounded, numbered context block."""
     parts: list[str] = []
     used = 0
     for i, h in enumerate(hits):
@@ -73,12 +67,11 @@ def answer(
     cite: bool = False,
     trace: bool = True,
 ) -> AnswerResult:
-    """Retrieve chunks for `question` (vector, optionally hybrid, optionally
-    cross-encoder reranked from a `rerank_pool`), build a grounded prompt, and
-    generate. `company` / `fiscal_year` scope retrieval to one filing.
-    `cite=True` asks the model to append [n] references to the excerpts it used
-    (opt-in — the eval runs without it). Interactive callers should pass a small
-    `max_retries` (e.g. 2) so a rate-limited call fails fast."""
+    """Retrieve evidence, optionally rerank it, and generate a grounded answer.
+
+    `company` and `fiscal_year` scope retrieval to one filing. `cite=True` adds
+    excerpt references without changing the default evaluation prompt.
+    """
     started = time.perf_counter()
     retrieve = hybrid_search if hybrid else search
     if rerank:
