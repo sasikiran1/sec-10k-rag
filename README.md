@@ -2,45 +2,17 @@
 
 ### Evaluation-driven RAG for SEC 10-K filings
 
-> A structure-aware retrieval and evaluation system for answering financial questions over SEC 10-K filings — built to measure whether each retrieval change actually improves answer quality.
+> **45.5% → 95.5% answer accuracy through measured retrieval improvements — then 82.7% on a harder 52-question / 9-filing validation set.**
+
+Question answering over SEC 10-K filings, built around an **evaluation harness that measures whether each change actually helps**.
+
+Every retrieval improvement is isolated, evaluated, and recorded — including changes that made performance **worse**.
+
+The RAG itself is intentionally straightforward. The point is the measurement:
+
+> *“Naive retrieval answered 45.5% of my eval set. Here is exactly which change bought which points.”*
 
 https://github.com/user-attachments/assets/741f2984-3ba0-4afb-b172-4467cbd7e1ae
-
----
-
-## Why this project exists
-
-Most RAG demos stop once the system produces plausible answers.
-
-This project starts there.
-
-**Filing Analyst** treats retrieval as an empirical system:
-
-```text
-hypothesis
-   ↓
-implementation
-   ↓
-evaluation
-   ↓
-failure analysis
-   ↓
-ablation
-   ↓
-re-evaluation
-```
-
-Every retrieval improvement is implemented separately and evaluated against a hand-verified question set.
-
-Failed experiments stay in the history.
-
-The goal is not:
-
-> "The answers look good."
-
-The goal is:
-
-> "Naive retrieval answered 45.5% of the evaluation set correctly. Here is exactly which change improved or degraded that number."
 
 ---
 
@@ -48,185 +20,124 @@ The goal is:
 
 ### Initial ablation
 
-22 hand-verified questions across four SEC 10-K filings:
+22 hand-verified questions over 4 filings:
 
-* Apple FY2023
-* Apple FY2025
-* Microsoft FY2026
-* NVIDIA FY2026
+- Apple FY2023
+- Apple FY2025
+- Microsoft FY2026
+- NVIDIA FY2026
 
-Generation and judging use Groq `openai/gpt-oss-120b` at temperature `0`.
+Generator and judge are both Groq `openai/gpt-oss-120b` at temperature `0`.
 
-Retrieval metrics (`Recall@6`, `MRR`) are calculated across the 19 non-refusal questions.
+Retrieval metrics (`Recall@6`, `MRR`) are computed over the 19 non-refusal questions.
 
-**Each row corresponds to a separate experiment and commit.**
+**Each row represents a separate experiment and commit.**
 
-| Configuration                              |  Accuracy |  Recall@6 |    MRR   |
-| ------------------------------------------ | :-------: | :-------: | :------: |
-| Naive vector retrieval, unscoped           |   45.5%   |   26.3%   |   0.11   |
-| + scope retrieval by company + fiscal year |   54.5%   |   42.1%   |   0.18   |
-| + cross-encoder reranking                  |   63.6%   |   57.9%   |   0.23   |
-| + natural-language chunk headers           |   77.3%   |   73.7%   |   0.49   |
-| + rerank candidate pool 25 → 60            | **95.5%** | **94.7%** | **0.60** |
+| Change | Accuracy | Recall@6 | MRR |
+|---|:---:|:---:|:---:|
+| Naive vector search, unscoped | 45.5% | 26.3% | 0.11 |
+| + scope retrieval to company + fiscal year | 54.5% | 42.1% | 0.18 |
+| + cross-encoder reranker (`ms-marco-MiniLM-L-6-v2`) | 63.6% | 57.9% | 0.23 |
+| + natural-language header before embedding | 77.3% | 73.7% | 0.49 |
+| + widen rerank candidate pool 25 → 60 | **95.5%** | **94.7%** | **0.60** |
 
-### **45.5% → 95.5%**
+## **45.5% → 95.5%**
 
-<img width="1214" height="688" alt="Evaluation results" src="https://github.com/user-attachments/assets/b9a97258-3f06-402e-b702-3a463b5bbd70" />
+<img width="1214" height="688" alt="Filing Analyst evaluation results" src="https://github.com/user-attachments/assets/b9a97258-3f06-402e-b702-3a463b5bbd70" />
 
----
+### Harder-set validation
 
-## Harder-set validation
+The best configuration was re-evaluated on:
 
-The best configuration was then evaluated on a larger and more diverse set:
+- **9 filings**
+- **52 questions**
+- additional industries and companies:
+  - JPMorgan
+  - Walmart
+  - ExxonMobil
+  - Coca-Cola
 
-* **9 SEC filings**
-* **52 questions**
-* additional companies and industries:
+It scored **82.7% accuracy**.
 
-  * JPMorgan
-  * Walmart
-  * ExxonMobil
-  * Coca-Cola
+The full ablation was **not** rerun on the 52-question set. On Groq's free tier, a single uncached naive-baseline pass required more than five hours of rate-limit backoff.
 
-The same configuration achieved:
-
-# **82.7% accuracy**
-
-The full ablation was not repeated over all 52 questions because a single uncached baseline run on Groq's free tier required more than five hours of rate-limit backoff.
-
-The larger evaluation therefore serves as **out-of-sample validation of the selected configuration**, not a second complete ablation.
+This larger run should therefore be read as **validation of the selected configuration**, not a second full ablation study.
 
 ---
 
-## Key findings
+## What changed — and why
 
-### 1. Scoping retrieval helped immediately
+### 1. Filing-aware retrieval
 
-Restricting retrieval to the requested company and fiscal year increased:
+Scoping retrieval to the requested company and fiscal year improved:
 
-```text
-Accuracy
-45.5% → 54.5%
+- Accuracy: **45.5% → 54.5%**
+- Recall@6: **26.3% → 42.1%**
 
-Recall@6
-26.3% → 42.1%
-```
+10-Ks contain large amounts of semantically similar language. Without filing metadata, chunks from the wrong company or fiscal year can rank highly.
 
-Financial filings contain large amounts of semantically similar language.
+### 2. Cross-encoder reranking
 
-Without metadata scoping, chunks from unrelated filings can rank highly despite belonging to the wrong company or fiscal period.
+Dense retrieval uses a bi-encoder: the question and chunks are embedded independently.
 
----
+The reranker instead scores each `(question, chunk)` pair jointly using `ms-marco-MiniLM-L-6-v2`.
 
-### 2. Cross-encoder reranking improved retrieval quality
+That improved:
 
-Initial vector retrieval uses a bi-encoder:
+- Accuracy: **54.5% → 63.6%**
+- Recall@6: **42.1% → 57.9%**
 
-```text
-question → embedding
-chunk    → embedding
-```
+### 3. Natural-language chunk headers
 
-Those embeddings are compared independently.
+This was the largest semantic improvement.
 
-The cross-encoder instead evaluates:
-
-```text
-(question, chunk)
-```
-
-together.
-
-Adding `ms-marco-MiniLM-L-6-v2` increased accuracy:
-
-```text
-54.5% → 63.6%
-```
-
-and Recall@6:
-
-```text
-42.1% → 57.9%
-```
-
----
-
-### 3. Natural-language chunk headers produced the largest semantic improvement
-
-Financial tables often contain very little natural-language context.
-
-For example:
+Financial tables are structurally rich but often semantically sparse when embedded as raw text. A table such as:
 
 ```text
 2026 | 2025 | 2024
 32,681 | 27,441 | 26,974
 ```
 
-does not embed particularly well against:
+does not embed especially well against a question like:
 
-> "What was NVIDIA's revenue in fiscal year 2026?"
+> What was NVIDIA's revenue in fiscal year 2026?
 
-Each chunk is therefore enriched before embedding with metadata such as:
+Before embedding, each chunk is enriched with metadata such as:
 
 ```text
 NVIDIA CORP — fiscal year 2026 — Item 7 (table).
 ```
 
-This improved:
+That improved:
 
-```text
-Accuracy
-63.6% → 77.3%
+- Accuracy: **63.6% → 77.3%**
+- MRR: **0.23 → 0.49**
 
-MRR
-0.23 → 0.49
-```
+The result suggests that adding natural-language context to structurally sparse financial tables can materially improve dense retrieval.
 
-The result suggests that **adding semantic context to structurally sparse financial tables can materially improve dense retrieval**.
+### 4. Wider rerank candidate pool
 
----
+Large multi-line financial-statement chunks often appeared around vector ranks **30–55**.
 
-### 4. Increasing the rerank candidate pool recovered buried financial tables
+With a top-25 candidate pool, the cross-encoder never saw them. Expanding the pool from `25 → 60` allowed the reranker to recover those chunks.
 
-Large multi-line financial-statement chunks often appeared around vector ranks:
+Final initial-set result:
 
-```text
-30–55
-```
+- Accuracy: **95.5%**
+- Recall@6: **94.7%**
+- MRR: **0.60**
 
-With a candidate pool of only 25, the cross-encoder never saw them.
-
-Increasing the pool:
-
-```text
-25 → 60
-```
-
-allowed the reranker to recover those chunks.
-
-Final initial-set performance:
-
-```text
-Accuracy: 95.5%
-Recall@6: 94.7%
-MRR:      0.60
-```
-
----
-
-### 5. Hybrid retrieval made the system worse
+### 5. The failed hybrid experiment stays
 
 A hybrid experiment combining:
 
-* dense vector retrieval
-* PostgreSQL full-text retrieval using `ts_rank_cd`
-* reciprocal rank fusion
+- dense vector retrieval
+- PostgreSQL full-text search using `ts_rank_cd`
+- reciprocal rank fusion (RRF)
 
-was also evaluated.
+reduced answer accuracy by roughly **18 percentage points**.
 
-It **reduced accuracy by approximately 18 percentage points**.
-
-The experiment remains available through:
+It remains available through:
 
 ```bash
 --hybrid
@@ -234,73 +145,46 @@ The experiment remains available through:
 
 and remains documented in the ablation history.
 
-The likely explanation is that PostgreSQL full-text ranking over this corpus over-weighted common filing terminology and boilerplate such as:
+The likely failure mode is corpus-specific: PostgreSQL full-text ranking over these filings over-prioritized common financial terminology and boilerplate. Fusing that weak lexical ranking with the stronger dense retriever through RRF degraded the final ranking.
 
-```text
-Apple
-revenue
-company
-year
-```
+> **Failed experiments are evidence too. Removing them would make the ablation story misleading.**
 
-Fusing a weak lexical ranker with a stronger dense retriever through RRF degraded the resulting ranking.
-
-The failed experiment is intentionally retained.
-
-> Deleting a failed experiment is how ablation tables become misleading.
+**Note:** PostgreSQL `ts_rank_cd` is not BM25. This project refers to this experiment as PostgreSQL full-text search / lexical retrieval, not true BM25.
 
 ---
 
-## Important caveats
+## Caveats
 
-The results should not be interpreted as production-scale benchmark numbers.
+These numbers should not be treated as production-scale benchmark results.
 
-### Dataset size
+### Small evaluation set
 
-The current evaluation sets contain:
+Current evaluation sizes:
 
-```text
-Initial: 22 questions
-Expanded: 52 questions
-Target: 120+ questions
-```
+- Initial ablation: **22 questions**
+- Expanded validation: **52 questions**
+- Target: **120+ questions**
 
-The sample is still small.
+### Judge calibration is not independent human validation
 
----
+The automated judge was compared against Claude-applied labels:
 
-### Judge validation
+- Cohen's κ = **1.0**
+- n = **26**
 
-The LLM judge is currently calibrated against Claude-applied labels:
+That demonstrates self-consistency of the current evaluation pipeline. It does **not** demonstrate agreement with independent human annotators.
 
-```text
-Cohen's κ = 1.0
-n = 26
-```
+Independent human labeling is the highest-priority open evaluation task.
 
-This demonstrates **self-consistency of the automated evaluation pipeline**, not agreement with independent human annotators.
+### Generator/judge dependence
 
-Independent human labeling is the highest-priority evaluation improvement.
+Generation and judging currently use the same model family. Future work should separate generator, judge, and human ground truth more rigorously.
+
+Per-question failures and the full experiment history live in [`evals/ablation.md`](evals/ablation.md).
 
 ---
 
-### Model dependence
-
-Generation and automated judging currently use the same model family through Groq.
-
-Future work should separate:
-
-```text
-generator
-judge
-human ground truth
-```
-
-more rigorously.
-
----
-
-## System architecture
+## Architecture
 
 ```text
                          OFFLINE INGESTION
@@ -309,11 +193,11 @@ more rigorously.
      │
      ▼
  Fetch 10-K
- edgar.py
+ (`edgar.py`)
      │
      ▼
- Structure-aware parsing
- chunker.py
+ Structure-aware chunking
+ (`chunker.py`)
      │
      ├── preserve tables
      ├── detect Item sections
@@ -321,22 +205,21 @@ more rigorously.
      │
      ▼
  Local embeddings
- all-MiniLM-L6-v2
+ (`all-MiniLM-L6-v2`)
      │
      ▼
  PostgreSQL + pgvector
-
 
                          QUESTION ANSWERING
 
  User question
       │
       ▼
- Dense retrieval
+ Dense vector retrieval
  top 60 candidates
       │
       ▼
- Cross-encoder reranker
+ Cross-encoder reranking
       │
       ▼
  Top 6 chunks
@@ -350,7 +233,6 @@ more rigorously.
       ▼
  Answer + [n] citations
 
-
                          EVALUATION
 
  Golden question set
@@ -358,11 +240,11 @@ more rigorously.
       ▼
  answer(question)
       │
+      ├──────────────► retrieval scoring
+      │                Recall@K / MRR
       ▼
  Generated answer
       │
-      ├──────────────► retrieval scoring
-      │                Recall@K / MRR
       ▼
  LLM judge
       │
@@ -370,172 +252,79 @@ more rigorously.
  Accuracy
       │
       ▼
- JSON experiment result
+ Versioned JSON result
 ```
 
 ---
 
-## How ingestion works
+## How it works
 
-SEC 10-K filings are delivered as large HTML/iXBRL documents.
+### Ingestion
 
-Blind fixed-character chunking can break important relationships such as:
+A 10-K is one large HTML/iXBRL document.
 
-```text
-year header
-    ↓
-financial metric
-    ↓
-value
-```
-
-especially inside tables.
-
-`chunk_structured()` therefore walks the filing structure instead.
+`chunk_structured()` walks the document structure rather than applying a blind fixed-character window.
 
 It:
 
-* detects HTML tables
-* converts tables into pipe-delimited grids
-* keeps tables intact where possible
-* identifies the current `Item N` section
-* associates chunks with company and fiscal year
-* prepends natural-language metadata before embedding
+- renders HTML tables into pipe-delimited grids
+- keeps tables whole where possible
+- tracks the current `Item N` section
+- attaches company and fiscal-year metadata
+- prepends a natural-language header before embedding
 
-Example metadata:
+Chunks are embedded locally with `all-MiniLM-L6-v2` (384 dimensions, CPU) and stored in PostgreSQL using `pgvector`.
 
-```text
-NVIDIA CORP — fiscal year 2026 — Item 7 (table).
-```
+### Retrieval
 
-Chunks are embedded locally using:
+`answer()` embeds the question and retrieves the 60 nearest chunks by cosine distance.
 
-```text
-all-MiniLM-L6-v2
-384 dimensions
-CPU inference
-```
+When filing scope is known, retrieval is restricted by `company + fiscal_year`.
 
-and stored in a `pgvector` column.
+A cross-encoder (`ms-marco-MiniLM-L-6-v2`) then jointly scores each `(question, chunk)` pair. The top 6 chunks are passed to generation.
 
----
+### Grounded generation
 
-## Retrieval pipeline
+The generation prompt requires the model to answer only from retrieved excerpts.
 
-The default retrieval path is:
-
-```text
-question
-   │
-   ▼
-vector search
-top 60
-   │
-   ▼
-cross-encoder reranking
-   │
-   ▼
-top 6
-   │
-   ▼
-generation
-```
-
-Vector retrieval uses cosine similarity.
-
-The reranker uses:
-
-```text
-ms-marco-MiniLM-L-6-v2
-```
-
-to jointly score each:
-
-```text
-(question, candidate chunk)
-```
-
-pair.
-
-Optional PostgreSQL full-text + RRF hybrid retrieval remains available for reproducing the failed experiment.
-
----
-
-## Grounded generation
-
-The generation prompt instructs the model to answer **only from retrieved filing excerpts**.
-
-If the retrieved context does not contain enough evidence, the model must return:
+When the required evidence is absent, the model must return:
 
 ```text
 NOT_IN_FILING
 ```
 
-The web interface enables citation mode.
+Citation mode asks the model to emit `[n]` markers tied directly to retrieved excerpts.
 
-Answers contain markers such as:
+### Caching and retries
 
-```text
-[1]
-[2]
-```
+All model calls go through `chat()`, which provides:
 
-which link directly to the retrieved chunks used to generate the response.
+- deterministic request caching
+- exponential backoff
+- jitter
+- `Retry-After` handling
+- token logging
+- latency logging
 
----
+With temperature `0`, unchanged request/context pairs can be reused from cache, making repeated evaluation runs substantially cheaper.
 
-## Caching and rate-limit handling
+### Observability
 
-All model calls go through:
+One trace row is recorded per `answer()` call.
 
-```python
-chat()
-```
+Each trace ties together:
 
-which provides:
+- question
+- retrieved chunk IDs
+- reranker scores
+- final retrieval order
+- generated answer
+- refusal status
+- `llm_call_id`
+- token usage
+- end-to-end latency
 
-* deterministic request caching
-* exponential-backoff retries
-* jitter
-* `Retry-After` handling
-* latency logging
-* token logging
-
-Because generation uses:
-
-```text
-temperature = 0
-```
-
-an unchanged request can be safely reused from the local cache.
-
-This makes repeated evaluation runs dramatically cheaper.
-
----
-
-## Observability
-
-Every `answer()` request creates a trace record containing:
-
-* user question
-* retrieved chunk IDs
-* reranker scores
-* final retrieval order
-* generated answer
-* refusal status
-* model call ID
-* token usage
-* end-to-end latency
-
-The API exposes:
-
-```text
-/traces
-```
-
-for inspecting previous requests.
-
-This makes individual failures debuggable instead of reducing evaluation to a single aggregate accuracy number.
+The API exposes `/traces` so failed questions can be inspected individually rather than reduced to a single aggregate accuracy number.
 
 ---
 
@@ -549,12 +338,11 @@ golden question
       ▼
 answer()
       │
+      ├────────────► retrieval evaluation
+      │              Recall@K / MRR
       ▼
 generated answer
       │
-      ├─────────► retrieval evaluation
-      │            Recall@K
-      │            MRR
       ▼
 judge(answer, gold)
       │
@@ -564,62 +352,45 @@ correct / incorrect
 
 A valid refusal on an intentionally unanswerable question counts as correct.
 
-Numeric answers with equivalent values but different formatting are considered equivalent.
+Numerically equivalent answers with different formatting count as matches.
 
-Retrieval relevance is evaluated separately from answer generation.
-
-A chunk is considered relevant when it contains all required `must_contain` evidence specified by the golden example.
-
-This keeps retrieval evaluation relatively stable even when chunk boundaries change.
+Retrieval relevance is evaluated independently from generation. A chunk is considered relevant when it contains every `must_contain` substring defined by the corresponding golden example.
 
 ---
 
-## Repository structure
+## Repository layout
 
-The orchestration layer is intentionally handwritten.
+The orchestration layer is intentionally handwritten: approximately **1,250 non-blank lines across 18 files** under `sec10k/`.
 
-Approximately **1,250 non-blank lines across 18 files** live under `sec10k/`.
+No LangChain or LlamaIndex is used. The goal was to keep retrieval, reranking, caching, generation, tracing, and evaluation inspectable.
 
-No LangChain or LlamaIndex is used.
-
-The purpose was to make every retrieval, ranking, caching and evaluation step inspectable.
-
-| File             | Responsibility                                   |
-| ---------------- | ------------------------------------------------ |
-| `config.py`      | Typed application settings                       |
-| `db.py`          | PostgreSQL access, LLM-call logging, traces      |
-| `cache.py`       | SQLite deterministic response cache              |
-| `retry.py`       | Retry/backoff behavior                           |
-| `llm.py`         | Model calls, caching, retries, structured output |
-| `embeddings.py`  | Local embedding generation                       |
-| `search.py`      | Vector, PostgreSQL FTS and hybrid retrieval      |
-| `rerank.py`      | Cross-encoder candidate reranking                |
-| `edgar.py`       | SEC EDGAR filing retrieval                       |
-| `chunker.py`     | Structure-aware HTML and table chunking          |
-| `ingest.py`      | Filing → chunks → embeddings → database          |
-| `answer.py`      | End-to-end RAG pipeline                          |
-| `goldens.py`     | Golden evaluation dataset loading                |
-| `judge.py`       | Automated answer judging                         |
-| `evaluate.py`    | Accuracy, Recall@K and MRR evaluation            |
-| `calibration.py` | Judge agreement / Cohen's κ                      |
-| `app.py`         | FastAPI API and demo application                 |
+| File | Responsibility |
+|---|---|
+| `config.py` | typed settings from `.env` |
+| `db.py` | PostgreSQL access, LLM call logging, traces |
+| `cache.py` | SQLite deterministic response cache |
+| `retry.py` | exponential backoff + jitter + `Retry-After` |
+| `llm.py` | model calls, caching, retries, structured output |
+| `embeddings.py` | local text embeddings |
+| `search.py` | vector, PostgreSQL FTS, and hybrid retrieval |
+| `rerank.py` | cross-encoder candidate reranking |
+| `edgar.py` | SEC EDGAR filing retrieval |
+| `chunker.py` | structure-aware HTML/table chunking |
+| `ingest.py` | filing → chunks → embeddings → database |
+| `answer.py` | retrieve → rerank → grounded generation |
+| `goldens.py` | golden evaluation set loader |
+| `judge.py` | automated answer judging |
+| `evaluate.py` | accuracy, Recall@K, MRR |
+| `calibration.py` | judge agreement / Cohen's κ |
+| `app.py` | FastAPI demo |
 
 Additional directories:
 
 ```text
-scripts/
-    runnable entrypoints
-
-tests/
-    mirrors sec10k/ responsibilities
-
-evals/
-    goldens
-    ablation history
-    evaluation JSON
-
-web/
-    lightweight demo frontend
+scripts/   runnable entrypoints
+tests/     mirrors sec10k/ responsibilities
+evals/     goldens, ablations, evaluation JSON
+web/       lightweight demo UI
 ```
 
 ---
@@ -628,20 +399,12 @@ web/
 
 ### Prerequisites
 
-* Python 3.12+
-* Docker
-* Groq API key
-* SEC-compatible user agent
+- Python 3.12+
+- Docker
+- Groq API key
+- SEC-compatible user agent
 
-The project was developed primarily on WSL2 / Ubuntu.
-
-A Linux environment is recommended because parts of the ML stack depend on native libraries such as:
-
-* PyTorch
-* tokenizers
-* lxml
-
----
+The project was developed primarily on WSL2 / Ubuntu. A Linux environment is recommended because the ML stack includes native dependencies such as PyTorch, tokenizers, and lxml.
 
 ### Install
 
@@ -659,13 +422,10 @@ Configure:
 
 ```text
 GROQ_API_KEY=your-key
-
 SEC_USER_AGENT="your-name your@email.com"
 ```
 
 SEC EDGAR requires an identifying user agent.
-
----
 
 ### Start PostgreSQL + pgvector
 
@@ -683,60 +443,37 @@ user: sec10k
 password: sec10k
 ```
 
----
-
 ### Build the corpus
 
 ```bash
 python scripts/build_corpus.py
 ```
 
-This:
-
-```text
-fetches 9 filings
-      ↓
-structure-aware parsing
-      ↓
-chunking
-      ↓
-local embeddings
-      ↓
-~3,300 PostgreSQL rows
-```
+This fetches 9 filings, performs structure-aware chunking, creates local embeddings, and writes roughly 3,300 rows to PostgreSQL.
 
 No LLM calls are required during corpus construction.
 
 ---
 
-## Run the web demo
+## Web demo
 
 ```bash
 uvicorn sec10k.app:app
 ```
 
-Open:
+Open `http://localhost:8000`.
 
-```text
-http://localhost:8000
-```
+The UI exposes:
 
-Select a filing or search across all filings.
+- filing selection
+- grounded answers
+- clickable citations
+- retrieved chunks
+- reranker relevance scores
+- filing metadata
+- SEC Item section
 
-The interface displays:
-
-* generated answer
-* clickable citations
-* retrieved chunks
-* cross-encoder relevance scores
-* filing metadata
-* SEC Item section
-
-Request traces are available at:
-
-```text
-http://localhost:8000/traces
-```
+Traces are available at `http://localhost:8000/traces`.
 
 ---
 
@@ -758,52 +495,31 @@ python scripts/run_eval.py \
   --sleep 18
 ```
 
-`--sleep 18` helps remain within Groq free-tier rate limits.
+`--sleep 18` helps stay within Groq free-tier rate limits.
 
-Results are written to:
-
-```text
-evals/results/
-```
-
-with one JSON artifact per run.
-
-Cached requests normally complete in seconds on subsequent runs.
+Results are written to `evals/results/`. Cached requests normally complete in seconds on later runs.
 
 ---
 
-## Calibrate the automated judge
+## Calibrate the judge
 
 ```bash
 python scripts/calibrate_judge.py
 ```
 
-This compares automated judge output against the labels stored in:
-
-```text
-evals/judge_calibration.yaml
-```
-
-and calculates agreement including Cohen's κ.
+This compares the automated judge with labels in `evals/judge_calibration.yaml` and calculates agreement including Cohen's κ.
 
 ---
 
 ## Tests
 
-Run offline/non-live tests:
+Offline/non-live tests:
 
 ```bash
 pytest -m "not live"
 ```
 
-Requirements:
-
-```text
-PostgreSQL running
-No external network calls
-```
-
-Run the complete suite:
+Full test suite:
 
 ```bash
 pytest
@@ -815,124 +531,84 @@ The full suite also exercises live LLM and SEC EDGAR integrations.
 
 ## Stack
 
-```text
-Python 3.12+
-PostgreSQL 16
-pgvector
-sentence-transformers
-Groq / OpenAI-compatible API
-FastAPI
-pytest
-Docker
-GitHub Actions
-```
-
-Embedding model:
-
-```text
-all-MiniLM-L6-v2
-```
-
-Reranker:
-
-```text
-ms-marco-MiniLM-L-6-v2
-```
+- Python 3.12+
+- PostgreSQL 16
+- `pgvector`
+- `sentence-transformers`
+- `all-MiniLM-L6-v2`
+- `ms-marco-MiniLM-L-6-v2`
+- Groq via OpenAI-compatible API
+- FastAPI
+- pytest
+- Docker
+- GitHub Actions
 
 ---
 
-## Current limitations
-
-* Evaluation dataset remains relatively small.
-* Automated judge has not yet been independently validated by human annotators.
-* Full ablations have not been repeated across the expanded 52-question dataset.
-* Retrieval currently focuses on individual filings rather than cross-document analytical reasoning.
-* Numerical reasoning is delegated primarily to the generation model.
-* PostgreSQL FTS is not a true BM25 implementation.
-* Current experiments use a limited set of generator/judge models.
-
----
-
-## Research and engineering roadmap
+## Roadmap
 
 ### Evaluation
 
-* [ ] Expand evaluation set to **120+ questions**
-* [ ] Add independent human annotation
-* [ ] Measure human-vs-judge agreement
-* [ ] Add confidence intervals
-* [ ] Add bootstrapped significance testing where appropriate
-* [ ] Separate generator and judge model families
+- [ ] Expand the golden set to **120+ questions**
+- [ ] Add independent human annotation
+- [ ] Measure human-vs-judge agreement
+- [ ] Add confidence intervals
+- [ ] Add bootstrap/significance analysis where appropriate
+- [ ] Separate generator and judge model families
 
 ### Retrieval
 
-* [ ] Compare dense retrieval against a **true BM25 implementation**
-* [ ] Re-evaluate dense + lexical fusion
-* [ ] Evaluate alternative embedding models
-* [ ] Evaluate alternative rerankers
-* [ ] Analyze retrieval sensitivity by question category
+- [ ] Add a **true BM25** baseline
+- [ ] Re-evaluate lexical + dense fusion
+- [ ] Compare alternative embedding models
+- [ ] Compare alternative rerankers
+- [ ] Break retrieval metrics down by question category
+- [ ] Evaluate table and narrative retrieval separately
 
-### Financial-document reasoning
+### Financial reasoning
 
-* [ ] Add explicit numerical reasoning
-* [ ] Add multi-hop questions across sections
-* [ ] Add cross-year comparisons
-* [ ] Add cross-company comparisons
-* [ ] Evaluate table-specific retrieval separately from narrative retrieval
+- [ ] Add explicit numerical reasoning
+- [ ] Add cross-section multi-hop questions
+- [ ] Add cross-year comparisons
+- [ ] Add cross-company comparisons
 
-### Reproducibility
+### Reproducibility / open source
 
-* [ ] Publish versioned benchmark releases
-* [ ] Add `CITATION.cff`
-* [ ] Add reproducible experiment configuration files
-* [ ] Add downloadable evaluation artifacts
-* [ ] Publish model/cost/latency comparisons
+- [ ] Publish versioned benchmark releases
+- [ ] Add downloadable evaluation artifacts
+- [ ] Add experiment configuration files
+- [ ] Track model / latency / cost comparisons
 
 ---
 
-## What this project is testing
+## Research question
 
-Filing Analyst is ultimately an experiment in a broader question:
+The project is ultimately exploring a broader question:
 
 > **How much can careful retrieval design and measurement improve the reliability of LLM systems over structurally complex financial documents?**
 
-The RAG architecture itself is intentionally straightforward.
-
-The emphasis is on:
-
-```text
-measurement
-reproducibility
-failure analysis
-retrieval quality
-grounding
-experimentation
-```
-
-rather than framework complexity.
+The architecture is intentionally straightforward. The emphasis is on measurement, reproducibility, failure analysis, retrieval quality, grounding, and experimentation rather than framework complexity.
 
 ---
 
 ## Reproducibility
 
-The complete evaluation history is available in:
+The complete ablation history is available in [`evals/ablation.md`](evals/ablation.md).
 
-[`evals/ablation.md`](evals/ablation.md)
+Individual evaluation runs are stored under `evals/results/`.
 
-Individual experiment outputs are stored under:
-
-```text
-evals/results/
-```
-
-Failed experiments are retained alongside successful ones so that the reported final configuration can be traced back through the full development history.
+Failed experiments are retained alongside successful ones so the final configuration can be traced through the full development history.
 
 ---
 
+## Citation
+
+If you use Filing Analyst in research, benchmarking, or teaching, please cite the repository using the metadata in [`CITATION.cff`](CITATION.cff).
+
+## Contributing
+
+Issues and pull requests are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## License
 
-Add an explicit open-source license before encouraging external reuse.
-
-For a permissive open-source project, MIT or Apache-2.0 are common options.
-
-Choose the license deliberately based on how you want others to use the project.
+Licensed under the Apache License 2.0. See [`LICENSE`](LICENSE).
