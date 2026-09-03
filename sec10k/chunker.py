@@ -1,8 +1,7 @@
-"""Turn a 10-K's HTML into retrievable chunks.
+"""Convert SEC 10-K HTML into structure-aware retrieval chunks.
 
-Structure-aware: tables are rendered whole (never split mid-grid), prose is packed
-to a size target, and every chunk is tagged with the "Item N" section it's under.
-(The naive fixed-window baseline this replaced is in git history, session 4.)
+Tables remain intact, prose is packed to a target size, and each chunk retains
+its SEC Item section.
 """
 from __future__ import annotations
 
@@ -14,39 +13,30 @@ from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from bs4.element import Tag
 from pydantic import BaseModel
 
-# Modern 10-Ks are inline-XBRL (XHTML). We parse them as HTML on purpose; the
-# warning about that is just noise here.
+# Modern 10-Ks are inline-XBRL/XHTML and are intentionally parsed as HTML here.
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
-# Matches a 10-K section heading like "Item 1.", "Item 1A.", "Item 7A."
 _ITEM_RE = re.compile(r"^\s*Item\s+(\d{1,2}[A-Z]?)\.?\s", re.IGNORECASE)
 
 
 class Block(BaseModel):
-    """One structural unit of the filing, in document order."""
+    """A structural unit of a filing in document order."""
 
     kind: Literal["text", "table"]
-    text: str            # for a table, a grid-preserving rendering (see render_table)
-    section: str = ""    # the most recent "Item N" heading this block falls under
+    text: str
+    section: str = ""
 
 
 class Chunk(BaseModel):
-    """A retrieval unit produced from one or more Blocks."""
+    """A retrieval unit produced from one or more blocks."""
 
     section: str
     kind: Literal["prose", "table"]
-    text: str            # includes a "[section]" prefix line
+    text: str
 
 
 def render_table(table: Tag) -> str:
-    """Render a <table> element to text that keeps rows and columns.
-
-    - For each <tr>, collect cell text from its <th>/<td> children:
-        cells = [c.get_text(" ", strip=True) for c in tr.find_all(["th", "td"])]
-    - Drop cells that are empty strings (10-K tables are full of spacer cells).
-    - If any cells remain, join them with "  |  " -> one line per row.
-    - Join the row-lines with "\n". Return "" if the table has no rows.
-    """
+    """Render an HTML table as a row-preserving pipe-delimited text grid."""
     rows: list[str] = []
     for tr in table.find_all("tr"):
         cells = [c.get_text(" ", strip=True) for c in tr.find_all(["th", "td"])]
@@ -57,18 +47,12 @@ def render_table(table: Tag) -> str:
 
 
 def html_to_blocks(html: str) -> list[Block]:
-    """Parse HTML into ordered Blocks, keeping tables intact.
-
-    Each <table> is rendered by render_table() and fenced with @@TABLE/@@ENDTABLE
-    sentinels so it survives get_text() as one unit; prose between sentinels is
-    split on blank lines and section changes. `section` tracks the last "Item N".
-    """
+    """Parse filing HTML into ordered prose and table blocks."""
     soup = BeautifulSoup(html, "lxml")
     for tag in soup(["script", "style"]):
         tag.decompose()
 
-    # Swap every <table> for a sentinel string so it survives get_text() but stays
-    # recognisable as an atomic unit.
+    # Sentinels preserve table boundaries while the surrounding HTML is flattened.
     for table in soup.find_all("table"):
         rendered = render_table(table)
         table.replace_with(soup.new_string(f"\n@@TABLE\n{rendered}\n@@ENDTABLE\n"))
@@ -117,9 +101,7 @@ def html_to_blocks(html: str) -> list[Block]:
 
 
 def chunk_structured(blocks: list[Block], *, target_chars: int = 1500) -> list[Chunk]:
-    """Pack Blocks into Chunks. Each table block is its own Chunk; text blocks
-    accumulate up to `target_chars` then flush. A chunk never spans two sections,
-    and every chunk's text starts with a "[<section>]" line."""
+    """Pack blocks into section-bounded prose chunks and atomic table chunks."""
     chunks: list[Chunk] = []
     buf: list[str] = []
     buf_section: str | None = None
