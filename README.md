@@ -28,7 +28,7 @@ the point was to see every step. One responsibility per file.
 
 **Ingestion** — offline, builds the `chunks` table
 | `edgar.py` | fetch a 10-K from SEC EDGAR (ticker → CIK → primary document) |
-| `chunker.py` | HTML → chunks. `chunk_fixed` = naive baseline; `chunk_structured` keeps tables whole and tags each chunk by Item |
+| `chunker.py` | HTML → chunks. `chunk_structured` keeps tables whole and tags each chunk by Item section |
 | `ingest.py` | glue: edgar + chunker + embeddings → DB, with a natural-language header per chunk |
 
 **QA + evaluation**
@@ -46,8 +46,31 @@ Flow: `build_corpus.py` fills `chunks` → `answer("…")` retrieves + reranks +
 
 ## Results
 
-See `evals/ablation.md` for the full table and caveats (small set, judge not yet
-independently calibrated).
+22 hand-verified questions over 4 filings (Apple FY23/FY25, Microsoft FY26, NVIDIA
+FY26). Generator + judge: Groq `openai/gpt-oss-120b`, temperature 0. Each row is a
+separate commit; retrieval metrics are over the 19 non-refusal items.
+
+| change | accuracy | recall@6 | MRR |
+|--------|:--------:|:--------:|:---:|
+| naive vector search, unscoped | 45.5% | 26.3% | 0.11 |
+| + scope retrieval to the filing (company + fiscal year) | 54.5% | 42.1% | 0.18 |
+| + hybrid vector·BM25 (RRF) — **regressed, reverted** | 36.4% | 21.1% | 0.08 |
+| + cross-encoder reranker (`ms-marco-MiniLM-L-6-v2`) | 63.6% | 57.9% | 0.23 |
+| + natural-language header on each chunk before embedding | 77.3% | 73.7% | 0.49 |
+| + widen rerank candidate pool 25 → 60 | **95.5%** | **94.7%** | **0.60** |
+
+**45.5% → 95.5%.** The hybrid step is kept in the table and the code (`--hybrid`)
+because deleting a failed experiment is how ablation tables lie — Postgres FTS has
+no IDF weighting, so it up-ranks boilerplate and RRF drags the good retriever down.
+
+Re-validated on a harder set (9 filings, 52 questions incl. a bank and two
+commodity companies): the same config scores **82.7%** — the full ablation wasn't
+re-run there (a single free-tier baseline pass = 5h of rate-limit backoff).
+
+**Caveats.** n is small. The LLM judge is calibrated only against Claude-applied
+labels (κ=1.0), not an independent human rater — so read the numbers as "strong on
+a small set with a self-consistent judge." Full detail and per-question failures in
+`evals/ablation.md`.
 
 ## Stack
 
@@ -77,8 +100,9 @@ Postgres listens on `localhost:5433` (db/user/pass all `sec10k`).
 uvicorn sec10k.app:app --reload    # http://localhost:8000
 ```
 
-Ask a question; the page shows the answer and every chunk it was generated from,
-with the reranker's relevance score, the filing, and the Item section.
+Ask a question; the page shows the answer (with clickable `[n]` citations into the
+sources) and every chunk it was generated from — the reranker's relevance score,
+the filing, and the Item section.
 
 ## Tests
 
