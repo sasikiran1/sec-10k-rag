@@ -158,6 +158,11 @@
   fiscal_year: 2026
   kind: single
   must_contain: ["4.5 billion", "H20"]
+  note: >
+    Item 7 MD&A states this explicitly ("the gross margin decrease was also impacted
+    by a $4.5 billion charge associated with H20 excess inventory and purchase
+    obligations"). Distinct from the $4.0B total inventory provisions in the Item 15
+    note — a known disambiguation trap the model currently fails.
 
 - id: aapl-fy25-iphone-units
   question: How many iPhone units did Apple sell in fiscal year 2025?
