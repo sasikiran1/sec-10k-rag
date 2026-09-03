@@ -1,6 +1,11 @@
 #Evaluation-driven RAG for SEC 10-K filings
 
 
+https://github.com/user-attachments/assets/741f2984-3ba0-4afb-b172-4467cbd7e1ae
+
+
+
+
 
 Question answering over SEC 10-K filings, built around an **evaluation harness that
 measures whether each change actually helps**. Every retrieval improvement is a
