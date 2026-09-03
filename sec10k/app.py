@@ -40,6 +40,21 @@ def filings() -> list[dict]:
     return [{"company": c, "fiscal_year": y} for c, y in rows]
 
 
+@app.get("/traces")
+def traces(limit: int = 20) -> list[dict]:
+    """Recent answer() calls: what was retrieved and what came back."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT created_at, question, company, fiscal_year, reranked, "
+            "       refused, latency_ms, retrieved, answer "
+            "FROM traces ORDER BY id DESC LIMIT %s",
+            (min(limit, 100),),
+        ).fetchall()
+    cols = ("created_at", "question", "company", "fiscal_year", "reranked",
+            "refused", "latency_ms", "retrieved", "answer")
+    return [dict(zip(cols, r)) for r in rows]
+
+
 @app.post("/ask")
 def ask(body: Ask) -> dict:
     try:

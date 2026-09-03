@@ -52,3 +52,21 @@ ALTER TABLE chunks
     ADD COLUMN IF NOT EXISTS text_tsv tsvector
     GENERATED ALWAYS AS (to_tsvector('english', text)) STORED;
 CREATE INDEX IF NOT EXISTS chunks_text_tsv_idx ON chunks USING gin (text_tsv);
+
+-- One row per answer() call: ties retrieval (which chunks, what scores) to the
+-- generation (answer, refusal, cost). The observability view over the pipeline.
+CREATE TABLE IF NOT EXISTS traces (
+    id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    question     text        NOT NULL,
+    company      text,                          -- retrieval scope, if any
+    fiscal_year  integer,
+    hybrid       boolean     NOT NULL DEFAULT false,
+    reranked     boolean     NOT NULL DEFAULT false,
+    retrieved    jsonb       NOT NULL,          -- [{chunk_id, score, section, kind}, ...] in final order
+    answer       text        NOT NULL,
+    refused      boolean     NOT NULL,
+    llm_call_id  bigint      REFERENCES llm_calls(id),
+    latency_ms   integer     NOT NULL           -- end-to-end: retrieve + rerank + generate
+);
+CREATE INDEX IF NOT EXISTS traces_created_at_idx ON traces (created_at);

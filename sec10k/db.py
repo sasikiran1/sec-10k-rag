@@ -85,3 +85,38 @@ def log_llm_call(call: LlmCall) -> int:
             ),
         ).fetchone()
         return row[0]
+
+
+def record_trace(
+    *,
+    question: str,
+    company: str | None,
+    fiscal_year: int | None,
+    hybrid: bool,
+    reranked: bool,
+    retrieved: list[dict],
+    answer: str,
+    refused: bool,
+    llm_call_id: int | None,
+    latency_ms: int,
+) -> int:
+    """Insert one `traces` row (retrieval + generation for a single answer() call)
+    and return its id. `retrieved` is a list of small dicts, stored as jsonb."""
+    from psycopg.types.json import Json
+
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            INSERT INTO traces (
+                question, company, fiscal_year, hybrid, reranked,
+                retrieved, answer, refused, llm_call_id, latency_ms
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                question, company, fiscal_year, hybrid, reranked,
+                Json(retrieved), answer, refused, llm_call_id, latency_ms,
+            ),
+        ).fetchone()
+        return row[0]

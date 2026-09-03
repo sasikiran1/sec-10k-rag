@@ -22,3 +22,9 @@ def test_filings_lists_corpus(corpus):
     assert r.status_code == 200
     rows = r.json()
     assert rows and all({"company", "fiscal_year"} <= row.keys() for row in rows)
+
+
+def test_traces_endpoint_returns_a_list():
+    r = client.get("/traces?limit=5")
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)

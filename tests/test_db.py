@@ -12,7 +12,7 @@ import psycopg
 import pytest
 
 from sec10k.config import get_settings
-from sec10k.db import LlmCall, get_connection, log_llm_call
+from sec10k.db import LlmCall, get_connection, log_llm_call, record_trace
 
 
 @pytest.fixture
@@ -72,6 +72,26 @@ def test_log_llm_call_persists_all_fields(sample_call):
         assert row["created_at"] is not None
     finally:
         _delete(row_id)
+
+
+def test_record_trace_roundtrips_retrieved_jsonb():
+    tid = record_trace(
+        question="q?", company="Apple Inc.", fiscal_year=2025,
+        hybrid=False, reranked=True,
+        retrieved=[{"chunk_id": 1, "score": 0.9, "section": "Item 8", "kind": "table"}],
+        answer="$1 million", refused=False, llm_call_id=None, latency_ms=42,
+    )
+    try:
+        with psycopg.connect(get_settings().database_url) as conn:
+            conn.row_factory = psycopg.rows.dict_row
+            row = conn.execute("SELECT * FROM traces WHERE id = %s", (tid,)).fetchone()
+        assert row["question"] == "q?"
+        assert row["reranked"] is True and row["refused"] is False
+        assert row["retrieved"][0]["chunk_id"] == 1        # jsonb -> python list/dict
+        assert row["latency_ms"] == 42
+    finally:
+        with psycopg.connect(get_settings().database_url) as conn:
+            conn.execute("DELETE FROM traces WHERE id = %s", (tid,))
 
 
 def test_log_llm_call_allows_null_tag_and_response_id(sample_call):

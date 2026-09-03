@@ -5,8 +5,11 @@ plain: this is the baseline the retrieval improvements in session 6 must beat.
 """
 from __future__ import annotations
 
+import time
+
 from pydantic import BaseModel
 
+from sec10k.db import record_trace
 from sec10k.goldens import REFUSAL
 from sec10k.llm import ChatResult, chat
 from sec10k.rerank import rerank as rerank_hits
@@ -68,6 +71,7 @@ def answer(
     rerank_pool: int = 60,
     max_retries: int = 6,
     cite: bool = False,
+    trace: bool = True,
 ) -> AnswerResult:
     """Retrieve chunks for `question` (vector, optionally hybrid, optionally
     cross-encoder reranked from a `rerank_pool`), build a grounded prompt, and
@@ -75,6 +79,7 @@ def answer(
     `cite=True` asks the model to append [n] references to the excerpts it used
     (opt-in — the eval runs without it). Interactive callers should pass a small
     `max_retries` (e.g. 2) so a rate-limited call fails fast."""
+    started = time.perf_counter()
     retrieve = hybrid_search if hybrid else search
     if rerank:
         pool = retrieve(question, k=rerank_pool, company=company, fiscal_year=fiscal_year)
@@ -89,6 +94,19 @@ def answer(
         },
     ]
     result = chat(messages, tag=tag, max_retries=max_retries)
-    return AnswerResult(
-        question=question, answer=result.text.strip(), hits=hits, chat=result
-    )
+    text = result.text.strip()
+
+    if trace:
+        record_trace(
+            question=question, company=company, fiscal_year=fiscal_year,
+            hybrid=hybrid, reranked=rerank,
+            retrieved=[
+                {"chunk_id": h.id, "score": round(h.score, 4),
+                 "section": h.section, "kind": h.kind}
+                for h in hits
+            ],
+            answer=text, refused=REFUSAL in text, llm_call_id=result.db_id,
+            latency_ms=round((time.perf_counter() - started) * 1000),
+        )
+
+    return AnswerResult(question=question, answer=text, hits=hits, chat=result)
