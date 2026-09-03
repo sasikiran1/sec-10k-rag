@@ -18,6 +18,13 @@ SYSTEM_PROMPT = (
     "Be concise: give the figure or fact asked for, with its unit. No commentary."
 )
 
+# Appended to SYSTEM_PROMPT when cite=True. Kept out of the default (measured)
+# prompt so turning citations on doesn't invalidate the ablation numbers.
+CITE_CLAUSE = (
+    " After the answer, cite the excerpt number(s) you used in square brackets, "
+    "e.g. [2] or [1][3]. Cite only excerpts that actually contain the answer."
+)
+
 
 class AnswerResult(BaseModel):
     question: str
@@ -60,12 +67,14 @@ def answer(
     rerank: bool = True,
     rerank_pool: int = 60,
     max_retries: int = 6,
+    cite: bool = False,
 ) -> AnswerResult:
     """Retrieve chunks for `question` (vector, optionally hybrid, optionally
     cross-encoder reranked from a `rerank_pool`), build a grounded prompt, and
     generate. `company` / `fiscal_year` scope retrieval to one filing.
-    Interactive callers should pass a small `max_retries` (e.g. 2) so a
-    rate-limited call fails in seconds instead of minutes of backoff."""
+    `cite=True` asks the model to append [n] references to the excerpts it used
+    (opt-in — the eval runs without it). Interactive callers should pass a small
+    `max_retries` (e.g. 2) so a rate-limited call fails fast."""
     retrieve = hybrid_search if hybrid else search
     if rerank:
         pool = retrieve(question, k=rerank_pool, company=company, fiscal_year=fiscal_year)
@@ -73,7 +82,7 @@ def answer(
     else:
         hits = retrieve(question, k=k, company=company, fiscal_year=fiscal_year)
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": SYSTEM_PROMPT + (CITE_CLAUSE if cite else "")},
         {
             "role": "user",
             "content": f"Excerpts:\n{format_context(hits)}\n\nQuestion: {question}",

@@ -95,6 +95,15 @@
     content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2rem;
     background: linear-gradient(transparent, var(--panel));
   }
+  .cite {
+    display: inline-block; font-size: .78em; font-weight: 700; line-height: 1;
+    padding: .12em .38em; margin: 0 .12em; border-radius: 5px; cursor: pointer;
+    color: var(--accent); background: var(--accent-soft); border: 1px solid transparent;
+    vertical-align: .08em;
+  }
+  .cite:hover { border-color: var(--accent); }
+  @keyframes flash { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: none; } }
+  .hit.flash { animation: flash 1.1s ease-out; }
 </style>
 </head>
 <body>
@@ -162,6 +171,33 @@ function scoreColor(rel) {           // rel in 0..1
   return rel > 0.66 ? "var(--good)" : rel > 0.33 ? "var(--mid)" : "var(--low)";
 }
 
+// Turn "[2]" / "[1][3]" in the answer into clickable chips that jump to a source card.
+function renderAnswer(text, nHits) {
+  const el = $("#answer");
+  el.innerHTML = "";
+  const re = /\[(\d+)\]/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    el.append(text.slice(last, m.index));
+    const n = +m[1];
+    if (n >= 1 && n <= nHits) {
+      const c = document.createElement("span");
+      c.className = "cite"; c.textContent = n;
+      c.onclick = () => {
+        const card = document.getElementById("hit-" + n);
+        if (!card) return;
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
+      };
+      el.append(c);
+    } else {
+      el.append(m[0]);
+    }
+    last = re.lastIndex;
+  }
+  el.append(text.slice(last));
+}
+
 $("#f").addEventListener("submit", async e => {
   e.preventDefault();
   const question = $("#q").value.trim();
@@ -197,7 +233,7 @@ $("#f").addEventListener("submit", async e => {
     }
 
     $("#answer").className = "";
-    $("#answer").textContent = d.answer;
+    renderAnswer(d.answer, d.hits.length);
     $("#meta").hidden = false;
     $("#meta").innerHTML =
       `<span class="badge">${d.tokens} tokens</span>` +
@@ -215,6 +251,7 @@ $("#f").addEventListener("submit", async e => {
       const col = scoreColor(rel);
       const div = document.createElement("div");
       div.className = "hit";
+      div.id = "hit-" + (i + 1);
       div.style.setProperty("--score-c", col);
       div.innerHTML = `
         <div class="hit-top">

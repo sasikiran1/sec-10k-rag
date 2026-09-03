@@ -46,12 +46,15 @@ def ask(body: Ask) -> dict:
         r = answer(
             body.question, company=body.company, fiscal_year=body.fiscal_year,
             max_retries=2,  # interactive: fail fast rather than sit through backoff
+            cite=True,      # ask for [n] references; the eval runs without this
         )
     except APIError as e:
         msg = getattr(e, "message", str(e))
         return {"error": f"LLM call failed ({type(e).__name__}): {msg}"}
+    # gpt-oss sometimes emits full-width brackets for citations; normalize to [n].
+    text = r.answer.translate(str.maketrans({"【": "[", "】": "]"}))
     return {
-        "answer": r.answer,
+        "answer": text.strip(),
         "tokens": r.chat.record.total_tokens,
         "latency_ms": r.chat.record.latency_ms,
         "cached": r.chat.cached,

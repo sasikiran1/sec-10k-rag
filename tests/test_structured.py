@@ -37,7 +37,7 @@ def _stub_chat(monkeypatch, responses: list[ChatResult]):
     """Make sec10k.llm.chat hand back `responses` in order; record the calls."""
     calls: list[list[dict]] = []
 
-    def fake_chat(messages, *, tag=None, response_format=None):
+    def fake_chat(messages, *, tag=None, response_format=None, max_retries=6):
         calls.append(messages)
         return responses[min(len(calls) - 1, len(responses) - 1)]
 
