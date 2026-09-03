@@ -25,7 +25,6 @@ questions. **Each row is its own commit.**
 |--------|:--------:|:--------:|:---:|
 | naive vector search, unscoped | 45.5% | 26.3% | 0.11 |
 | + scope retrieval to the filing (company + fiscal year) | 54.5% | 42.1% | 0.18 |
-| + hybrid vector · BM25 (reciprocal-rank fusion) — **regressed, reverted** | 36.4% | 21.1% | 0.08 |
 | + cross-encoder reranker (`ms-marco-MiniLM-L-6-v2`) | 63.6% | 57.9% | 0.23 |
 | + natural-language header on each chunk before embedding | 77.3% | 73.7% | 0.49 |
 | + widen the rerank candidate pool 25 → 60 | **95.5%** | **94.7%** | **0.60** |
