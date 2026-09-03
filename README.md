@@ -1,5 +1,7 @@
 #Evaluation-driven RAG for SEC 10-K filings
 
+
+
 Question answering over SEC 10-K filings, built around an **evaluation harness that
 measures whether each change actually helps**. Every retrieval improvement is a
 separate commit with its effect on a hand-verified question set recorded in the
